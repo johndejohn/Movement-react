@@ -143,8 +143,8 @@
                     :name     "Raiden Token"
                     :address  "0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6"
                     :decimals 18}
-                   {:symbol   :SNT
-                    :name     "Status Network Token"
+                   {:symbol   :MNT
+                    :name     "Movement Network Token"
                     :address  "0x744d70fdbe2ba4cf95131626614a1763df805b9e"
                     :decimals 18}
                    {:symbol   :SNGLS

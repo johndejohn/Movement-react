@@ -162,7 +162,7 @@
 
     EthereumProvider.prototype.on = function (type, handler)
     {
-        console.log("Not supported by Status")
+        console.log("Not supported by Movement")
     }
 
     EthereumProvider.prototype.request = function (requestArguments)
