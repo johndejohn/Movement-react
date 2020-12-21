@@ -2086,7 +2086,7 @@
 
            (and (= state :completed)
                 (not-empty snt-amount))
-           (assoc :accessory-value (str snt-amount " SNT"))))))))
+           (assoc :accessory-value (str snt-amount " MNT"))))))))
 
 (re-frame/reg-sub
  :tribute-to-talk/enabled?
@@ -2157,7 +2157,7 @@
   (str (ens/registration-cost chain-id)
        (case chain-id
          3 " STT"
-         1 " SNT"
+         1 " MNT"
          "")))
 
 (re-frame/reg-sub
@@ -2178,7 +2178,7 @@
     :amount-label      (ens-amount-label chain-id)
     :sufficient-funds? (money/sufficient-funds?
                         (money/formatted->internal (money/bignumber 10) :SNT 18)
-                        (get balance :SNT))}))
+                        (get balance :MNT))}))
 
 (re-frame/reg-sub
  :ens/confirmation-screen
@@ -2244,8 +2244,8 @@
          (assoc :fiat-amount
                 (money/fiat-amount-value (:amount message)
                                          (:currency message)
-                                         :USD prices)
-                :fiat-currency "USD")
+                                         :INT prices)
+                :fiat-currency "INT")
          (and (:receiver message) wallet-acc)
          (assoc :account wallet-acc)))
      sign)))
@@ -2279,8 +2279,8 @@
   [gas-error-message balance symbol amount ^js gas ^js gasPrice]
   (if (and gas gasPrice)
     (let [^js fee (.times gas gasPrice)
-          ^js available-ether (money/bignumber (get balance :ETH 0))
-          ^js available-for-gas (if (= :ETH symbol)
+          ^js available-ether (money/bignumber (get balance :INT 0))
+          ^js available-for-gas (if (= :INT symbol)
                                   (.minus available-ether (money/bignumber amount))
                                   available-ether)]
       (merge {:gas-error-state (when gas-error-message :gas-is-set)}

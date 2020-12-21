@@ -257,7 +257,7 @@
   {:events [::update-balance-success]}
   [{:keys [db]} address balance]
   {:db (assoc-in db
-                 [:wallet :accounts (eip55/address->checksum address) :balance :ETH]
+                 [:wallet :accounts (eip55/address->checksum address) :balance :INT]
                  (money/bignumber balance))})
 
 (fx/defn update-toggle-in-settings
@@ -336,7 +336,7 @@
   (let [^js gas (money/bignumber 21000)
         ^js gasPrice (get-in db [:wallet/prepare-transaction :gasPrice])
         ^js fee (when gasPrice (.times gas gasPrice))
-        amount-text (if (= :ETH symbol)
+        amount-text (if (= :INT symbol)
                       (when (and fee (money/sufficient-funds? fee amount))
                         (str (wallet.utils/format-amount (.minus amount fee) decimals)))
                       (str (wallet.utils/format-amount amount decimals)))]
@@ -359,7 +359,7 @@
                ::json-rpc/call [{:method (json-rpc/call-ext-method "requestTransaction")
                                  :params [(:public-key to)
                                           amount
-                                          (when-not (= symbol :ETH)
+                                          (when-not (= symbol :INT)
                                             address)
                                           from-address]
                                  :on-success #(re-frame/dispatch [:transport/message-sent % 1])}]})))
@@ -432,7 +432,7 @@
                         {:from (ethereum/get-default-account
                                 (:multiaccount/accounts db))
                          :to contact
-                         :symbol :ETH
+                         :symbol :INT
                          :from-chat? true})
              :dispatch [:navigate-to :prepare-send-transaction]}
       ens-verified
@@ -454,7 +454,7 @@
                            (-> identity
                                contact.db/public-key->new-contact
                                contact.db/enrich-contact))
-                 :symbol :ETH
+                 :symbol :INT
                  :from-chat? true
                  :request-command? true})
      :dispatch [:navigate-to :request-transaction]}))
@@ -465,7 +465,7 @@
   {:db (assoc db :wallet/prepare-transaction
               {:from       account
                :to         nil
-               :symbol     :ETH
+               :symbol     :INT
                :from-chat? false})
    :dispatch [:navigate-to :prepare-send-transaction]
    :signing/update-gas-price {:success-event :wallet.send/update-gas-price-success}})

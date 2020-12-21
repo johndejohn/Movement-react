@@ -58,7 +58,7 @@
     (when (not= network-status :offline)
       {:wallet/get-prices
        {:from          (if mainnet?
-                         (conj tokens "ETH")
+                         (conj tokens "INT")
                          [(-> (tokens/native-currency chain)
                               (wallet.utils/exchange-symbol))])
         :to            [(:code currency)]

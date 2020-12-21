@@ -79,22 +79,22 @@
 
 (def all-tokens
   {:mainnet {"0x744d70fdbe2ba4cf95131626614a1763df805b9e" {:address  "0x744d70fdbe2ba4cf95131626614a1763df805b9e"
-                                                           :name     "Status Network Token"
-                                                           :symbol   :SNT
+                                                           :name     "Movement Network Token"
+                                                           :symbol   :MNT
                                                            :decimals 18}}
    :testnet {"0xc55cf4b03948d7ebc8b9e8bad92643703811d162" {:address  "0xc55cf4b03948d7ebc8b9e8bad92643703811d162"
-                                                           :name     "Status Test Token"
+                                                           :name     "Movement Test Token"
                                                            :symbol   :STT
                                                            :decimals  18}}})
 
 (deftest generate-erc20-uri
   (is (= nil (eip681/generate-erc20-uri nil nil all-tokens)))
   (is (= "ethereum:0x744d70fdbe2ba4cf95131626614a1763df805b9e/transfer?uint256=5&address=0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7"
-         (eip681/generate-erc20-uri "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" {:symbol :SNT :value 5} (:mainnet all-tokens))))
+         (eip681/generate-erc20-uri "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" {:symbol :MNT :value 5} (:mainnet all-tokens))))
   (is (= "ethereum:0x744d70fdbe2ba4cf95131626614a1763df805b9e/transfer?uint256=5&address=0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7&gas=10000&gasPrice=10000"
-         (eip681/generate-erc20-uri "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" {:symbol :SNT :value 5 :gas 10000 :gasPrice 10000} (:mainnet all-tokens))))
+         (eip681/generate-erc20-uri "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" {:symbol :MNT :value 5 :gas 10000 :gasPrice 10000} (:mainnet all-tokens))))
   (is (= "ethereum:0x744d70fdbe2ba4cf95131626614a1763df805b9e/transfer?uint256=5&address=0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7"
-         (eip681/generate-erc20-uri "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" {:symbol :SNT :chain-id 1 :value 5} (:mainnet all-tokens))))
+         (eip681/generate-erc20-uri "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" {:symbol :MNT :chain-id 1 :value 5} (:mainnet all-tokens))))
   (is (= "ethereum:0xc55cf4b03948d7ebc8b9e8bad92643703811d162@3/transfer?uint256=5&address=0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7"
          (eip681/generate-erc20-uri "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" {:symbol :STT :chain-id 3 :value 5} (:testnet all-tokens)))))
 
@@ -133,7 +133,7 @@
 (deftest extract-request-details
   (let [{:keys [value symbol address]} (eip681/extract-request-details {:address "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" :value "1ETH"} {})]
     (is (.equals (money/ether->wei (money/bignumber 1)) value))
-    (is (= :ETH symbol))
+    (is (= :INT symbol))
     (is (= "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" address)))
   (is (= (eip681/extract-request-details {:address "0x744d70fdbe2ba4cf95131626614a1763df805b9e" :chain-id 1 :function-name "unknown"}
                                          {:address "0x744d70fdbe2ba4cf95131626614a1763df805b9e" :chain-id 1 :function-name "unknown"})))
@@ -144,5 +144,5 @@
                                                                                                                       :symbol   :SNT
                                                                                                                       :decimals 18}})]
     (is (.equals (money/bignumber 1000) value))
-    (is (= :SNT symbol))
+    (is (= :MNT symbol))
     (is (= "0x89205a3a3b2a69de6dbf7f01ed13b2108b2c43e7" address))))

@@ -7,7 +7,7 @@
   (memoize
    (fn []
      {:name     "Native"
-      :symbol   :ETH
+      :symbol   :INT
       :decimals 18
       :icon     {:source (js/require "../resources/images/tokens/default-native.png")}})))
 
@@ -15,23 +15,23 @@
 
 (def all-native-currencies
   (ethereum.macros/resolve-native-currency-icons
-   {:mainnet {:name     "Ether"
-              :symbol   :ETH
+   {:mainnet {:name     "Inter"
+              :symbol   :INT
               :decimals 18}
-    :testnet {:name           "Ropsten Ether"
-              :symbol         :ETH
+    :testnet {:name           "Ropsten Inter"
+              :symbol         :INT
               :symbol-display :ETHro
               :decimals       18}
-    :rinkeby {:name           "Rinkeby Ether"
-              :symbol         :ETH
+    :rinkeby {:name           "Rinkeby Inter"
+              :symbol         :INT
               :symbol-display :ETHri
               :decimals       18}
     :poa     {:name           "POA"
-              :symbol         :ETH
+              :symbol         :INT
               :symbol-display :POA
               :decimals       18}
     :xdai    {:name            "xDAI"
-              :symbol          :ETH
+              :symbol          :INT
               :symbol-display  :xDAI
               :symbol-exchange :DAI
               :decimals        18}}))
@@ -747,8 +747,8 @@
                     :decimals 6}])
    :testnet
    (resolve-icons :testnet
-                  [{:name     "Status Test Token"
-                    :symbol   :STT
+                  [{:name     "Movement Test Token"
+                    :symbol   :MTT
                     :decimals 18
                     ;;NOTE(goranjovic): intentionally checksummed for purposes of testing
                     :address  "0xc55cf4b03948d7ebc8b9e8bad92643703811d162"}
@@ -787,8 +787,8 @@
                     :name     "WIBB"
                     :address  "0x7d4ccf6af2f0fdad48ee7958bcc28bdef7b732c7"
                     :decimals 18}
-                   {:name     "Status Test Token"
-                    :symbol   :STT
+                   {:name     "Movement Test Token"
+                    :symbol   :MTT
                     :decimals 18
                     :address  "0xc55cf4b03948d7ebc8b9e8bad92643703811d162"}])
 

@@ -54,7 +54,7 @@
 (defn- fill-prepare-transaction-details
   [db
    {:keys [address name value symbol gas gasPrice gasLimit]
-    :or   {symbol :ETH}}
+    :or   {symbol :INT}}
    all-tokens]
   (assoc db :wallet/prepare-transaction
          (cond-> {:to      address
@@ -65,7 +65,7 @@
            gasLimit  (assoc :gas (money/bignumber gasLimit))
            gasPrice (assoc :gasPrice (money/bignumber gasPrice))
            value (assoc :amount-text
-                        (if (= :ETH symbol)
+                        (if (= :INT symbol)
                           (str (money/internal->formatted value symbol (get all-tokens symbol)))
                           (str value)))
            symbol (assoc :symbol symbol))))
