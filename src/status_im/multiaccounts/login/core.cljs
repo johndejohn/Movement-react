@@ -14,6 +14,7 @@
             [status-im.native-module.core :as status]
             [status-im.notifications.core :as notifications]
             [status-im.popover.core :as popover]
+            [status-im.communities.core :as communities]
             [status-im.protocol.core :as protocol]
             [status-im.stickers.core :as stickers]
             [status-im.ui.screens.mobile-network-settings.events :as mobile-network]
@@ -221,6 +222,7 @@
               (protocol/initialize-protocol {:default-mailserver true})
               (check-network-version network-id)
               (chat.loading/initialize-chats)
+              (communities/fetch)
               (contact/initialize-contacts)
               (stickers/init-stickers-packs)
               (mobile-network/on-network-status-change)
@@ -269,10 +271,10 @@
 
 (fx/defn create-only-events
   [{:keys [db] :as cofx}]
-  (let [{:keys [multiaccount multiaccounts :multiaccount/accounts]} db
-        {:keys [creating?]}                                         (:multiaccounts/login db)
-        first-account?                                              (and creating?
-                                                                         (empty? multiaccounts))]
+  (let [{:keys [multiaccount :multiaccounts/multiaccounts :multiaccount/accounts]} db
+        {:keys [creating?]} (:multiaccounts/login db)
+        first-account?      (and creating?
+                                 (empty? multiaccounts))]
     (fx/merge cofx
               {:db                   (-> db
                                          (dissoc :multiaccounts/login)
@@ -284,16 +286,17 @@
                                            ;;later on there is a check that filters have been initialized twice
                                            ;;so here we set it at 1 already so that it passes the check once it has
                                            ;;been initialized
-                                          :filters/initialized 1))
-               :dispatch-later [{:ms 2000 :dispatch [::initialize-wallet accounts nil nil (:recovered multiaccount)]}]
+                                          :filters/initialized 1)
+                                         (assoc-in [:multiaccount :multiaccounts/first-account] first-account?))
+               :dispatch-later       [{:ms 2000 :dispatch [::initialize-wallet accounts nil nil (:recovered multiaccount)]}]
                :filters/load-filters [[]]}
               (finish-keycard-setup)
-              (when first-account?
-                (acquisition/create))
               (protocol/initialize-protocol {:mailservers        []
                                              :mailserver-ranges  {}
                                              :mailserver-topics  {}
                                              :default-mailserver true})
+
+              (communities/fetch)
               (multiaccounts/switch-preview-privacy-mode-flag)
               (link-preview/request-link-preview-whitelist)
               (logging/set-log-level (:log-level multiaccount)))))
@@ -448,3 +451,13 @@
          (popover/show-popover {:view :secure-with-biometric})
          (when-not (= previous-auth-method keychain/auth-method-none)
            (popover/show-popover {:view :disable-password-saving})))))))
+
+(fx/defn welcome-lets-go
+  {:events [::welcome-lets-go]}
+  [cofx]
+  (let [first-account? (get-in cofx [:db :multiaccount :multiaccounts/first-account])]
+    (fx/merge cofx
+              (when first-account?
+                (acquisition/create))
+              (navigation/navigate-reset {:index  0
+                                          :routes [{:name :tabs}]}))))
