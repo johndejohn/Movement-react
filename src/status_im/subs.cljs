@@ -605,12 +605,19 @@
  (fn [multiaccounts]
    (> (count multiaccounts) 1)))
 
+;; NOTE: this subscription only works on login
 (re-frame/reg-sub
  :multiaccounts.login/keycard-account?
  :<- [:multiaccounts/multiaccounts]
  :<- [:multiaccounts/login]
  (fn [[multiaccounts {:keys [key-uid]}]]
    (get-in multiaccounts [key-uid :keycard-pairing])))
+
+(re-frame/reg-sub
+ :multiaccounts/keycard-account?
+ :<- [:multiaccount]
+ (fn [multiaccount]
+   (:keycard-pairing multiaccount)))
 
 (re-frame/reg-sub
  :accounts-without-watch-only
@@ -2474,7 +2481,9 @@
  :link-preview/whitelist
  :<- [:multiaccount]
  (fn [multiaccount]
-   (get multiaccount :link-previews-whitelist)))
+   (filter (fn [{:keys [address]}]
+             (config/link-preview-enabled-site? address))
+           (get multiaccount :link-previews-whitelist))))
 
 (re-frame/reg-sub
  :link-preview/cache
