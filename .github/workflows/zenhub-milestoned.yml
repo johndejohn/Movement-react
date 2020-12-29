@@ -1,8 +1,8 @@
-name: Zenhub integration assigned
+name: Zenhub integration milestoned
 on:
   issues:
     types:
-      - assigned
+      - milestoned
 
 jobs:
   build:
