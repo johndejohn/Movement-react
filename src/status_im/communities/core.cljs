@@ -12,7 +12,7 @@
    [status-im.ethereum.json-rpc :as json-rpc]))
 
 (def featured
-  [{:name "Status"
+  [{:name "Movement"
     :id constants/status-community-id}])
 
 (def access-no-membership 1)

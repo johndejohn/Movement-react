@@ -2264,7 +2264,7 @@
     :chain             chain
     :amount-label      (ens-amount-label chain-id)
     :sufficient-funds? (money/sufficient-funds?
-                        (money/formatted->internal (money/bignumber 10) :SNT 18)
+                        (money/formatted->internal (money/bignumber 10) :MNT 18)
                         (get balance :MNT))}))
 
 (re-frame/reg-sub

@@ -168,7 +168,7 @@
        (i18n/label :t/tribute-to-talk-finish-desc)
        [{:style {:color colors/black
                  :font-weight "600"}} snt-amount]
-       " SNT"]
+       " MNT"]
       :disabled
       [react/text {:style (assoc styles/description-label :margin-top 16)}
        (i18n/label :t/tribute-to-talk-disabled-note)]
@@ -209,7 +209,7 @@
        [react/nested-text {:style styles/current-snt-amount}
         snt-amount
         [{:style (assoc styles/current-snt-amount :color colors/gray)}
-         " SNT"]]]
+         " MNT"]]]
       [snt-asset-value fiat-value]]]
     [react/view {:flex 1}]
     [react/text {:on-press #(re-frame/dispatch
@@ -291,7 +291,7 @@
                       :t/tribute-to-talk-paywall-learn-more-1))]]
     [separator]
     [pay-to-chat-message {:snt-amount    1000
-                          :token         " SNT"
+                          :token         " MNT"
                           :fiat-currency "USD"
                           :fiat-amount   "5"
                           :style         (assoc styles/learn-more-section
