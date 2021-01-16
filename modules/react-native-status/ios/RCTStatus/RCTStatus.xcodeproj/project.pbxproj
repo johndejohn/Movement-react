@@ -238,6 +238,7 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../../../ios/Pods/Headers/Public/SSZipArchive";
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 				VALID_ARCHS = "armv7 armv7s arm64";
@@ -269,7 +270,8 @@
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				VALID_ARCHS = "armv7 armv7s arm64";
+				VALID_ARCHS = "armv7 armv7s arm64 ";
+				"VALID_ARCHS[sdk=iphonesimulator14.3]" = "armv7 armv7s x86_64";
 			};
 			name = Debug;
 		};
@@ -289,8 +291,13 @@
 					"$(SRCROOT)/../../../../node_modules/react-native/React/**",
 					"$(SRCROOT)/../../../../node_modules/react-native-config/ios/ReactNativeConfig",
 				);
+<<<<<<< HEAD
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				ONLY_ACTIVE_ARCH = NO;
+=======
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				ONLY_ACTIVE_ARCH = YES;
+>>>>>>> 5c3133adb6ba62af2e45bd7ba70d097f392965d7
 				OTHER_LDFLAGS = (
 					"-ObjC",
 					"$(inherited)",
