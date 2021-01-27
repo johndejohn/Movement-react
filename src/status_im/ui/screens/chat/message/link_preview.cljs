@@ -79,13 +79,14 @@
                           :style               (styles/link-preview-image outgoing)
                           :accessibility-label :member-photo}]
             (when-not (is-gif? thumbnailUrl)
-              [quo/text {:size  :small
-                         :style styles/link-preview-title}
-               title]
-              [quo/text {:size  :small
-                         :color :secondary
-                         :style styles/link-preview-site}
-               site])]])))))
+              [:<>
+               [quo/text {:size  :small
+                          :style styles/link-preview-title}
+                title]
+               [quo/text {:size  :small
+                          :color :secondary
+                          :style styles/link-preview-site}
+                site]])]])))))
 
 (defview link-preview-wrapper [links outgoing timeline]
   (letsubs
