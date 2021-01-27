@@ -57,6 +57,9 @@
                 :type     :secondary}
     (i18n/label :t/dont-ask)]])
 
+(defn is-gif? [url]
+  (string/ends-with? url ".gif"))
+
 (defview link-preview-loader [link outgoing timeline]
   (letsubs [cache [:link-preview/cache]]
     (let [{:keys [site title thumbnailUrl error] :as preview-data} (get cache link)]
@@ -75,13 +78,14 @@
             [react/image {:source              {:uri thumbnailUrl}
                           :style               (styles/link-preview-image outgoing)
                           :accessibility-label :member-photo}]
-            [quo/text {:size  :small
-                       :style styles/link-preview-title}
-             title]
-            [quo/text {:size  :small
-                       :color :secondary
-                       :style styles/link-preview-site}
-             site]]])))))
+            (when-not (is-gif? thumbnailUrl)
+              [quo/text {:size  :small
+                         :style styles/link-preview-title}
+               title]
+              [quo/text {:size  :small
+                         :color :secondary
+                         :style styles/link-preview-site}
+               site])]])))))
 
 (defview link-preview-wrapper [links outgoing timeline]
   (letsubs
