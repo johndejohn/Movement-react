@@ -232,7 +232,8 @@
                        (reduce (fn [acc {:keys [address symbol]}]
                                  (assoc acc address symbol))
                                {}))]
-    (when (not= network-status :offline)
+    (when (and (seq addresses)
+               (not= network-status :offline))
       (fx/merge
        cofx
        {:wallet/get-balances        addresses
