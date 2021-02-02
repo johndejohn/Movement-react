@@ -231,8 +231,7 @@
         max-known-block (get-max-block-with-transfers db address)
         effects (cond-> [(when (seq transfers)
                            (set-lowest-fetched-block checksum transfers))
-                         (when (seq transfers)
-                           (set-max-block-with-transfers checksum transfers))]
+                         (set-max-block-with-transfers checksum transfers)]
 
                   (seq transfers)
                   (concat (mapv add-transfer transfers))
