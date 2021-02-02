@@ -90,6 +90,8 @@ class DappTabButton(TabButton):
         from views.dapps_view import DappsView
         if desired_element_text == 'enter_url':
             self.click_until_presence_of_element(DappsView(self.driver).enter_url_editbox)
+        if desired_element_text == 'webview':
+            self.find_element().click()
         else:
             base_view = BaseView(self.driver)
             self.click_until_presence_of_element(base_view.element_by_text_part(desired_element_text))

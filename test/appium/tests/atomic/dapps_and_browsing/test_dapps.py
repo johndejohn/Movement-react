@@ -36,6 +36,40 @@ class TestDApps(SingleDeviceTestCase):
         if not status_test_dapp.element_by_text(user['public_key']).is_element_displayed():
             self.driver.fail('Public key is not returned')
 
+
+    @marks.testrail_id(6635)
+    @marks.medium
+    def test_webview_camera_permission(self):
+        ### URL will be updated
+        web_view_camera_url = 'https://serhy.github.io/webviewcamera.html?nocache=1321113'
+        sign_in_view = SignInView(self.driver)
+        home_view = sign_in_view.create_user()
+        self.driver.set_clipboard_text(web_view_camera_url)
+        dapp_view = home_view.dapp_tab_button.click()
+        dapp_view.enter_url_editbox.click()
+        dapp_view.paste_text()
+        dapp_view.confirm()
+        if dapp_view.element_by_text_part('camera requests blocked.').is_element_displayed():
+            pass
+        dapp_view.swipe_down()
+        profile = home_view.profile_button.click()
+        profile.privacy_and_security_button.click()
+        if profile.element_by_text_part('Webview camera permission requests').is_element_displayed():
+            profile.element_by_text_part('Webview camera permission requests').click()
+        home_view.dapp_tab_button.click(desired_element_text='webview')
+        from views.web_views.base_web_view import BaseWebView
+        camera_dapp = BaseWebView(self.driver)
+        camera_dapp.browser_refresh_page_button.click()
+        if camera_dapp.element_by_text_part('would like to use your camera').is_element_displayed():
+            camera_dapp.allow_button.click()
+        camera_dapp.browser_refresh_page_button.click()
+        if not camera_dapp.element_by_text_part('Allow').is_element_displayed():
+            camera_dapp.element_by_text_part('Click to show').click()
+
+
+
+
+
     @marks.testrail_id(6323)
     @marks.medium
     @marks.flaky
