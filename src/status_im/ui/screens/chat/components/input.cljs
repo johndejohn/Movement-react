@@ -84,7 +84,7 @@
   ;; it is placed inside some text we have to specify `:selection` on
   ;; Android to ensure that cursor is added after the mention, not after
   ;; the last char in input. On iOS it works that way without this code
-  (when (and cursor platform/android?)
+  #_(when (and cursor platform/android?)
     (clj->js {:start cursor :end cursor})))
 
 (defn on-selection-change [cursor timeout-id last-text-change mentionable-users args]
@@ -116,7 +116,7 @@
                           mentionable-users]))
     ;; NOTE(rasom): we have to reset `cursor` value when user starts using
     ;; text-input because otherwise cursor will stay in the same position
-    (when (and cursor platform/android?)
+    #_(when (and cursor platform/android?)
       (re-frame/dispatch [::mentions/clear-cursor]))))
 
 (defn on-change [on-text-change last-text-change timeout-id  mentionable-users args]
@@ -188,15 +188,25 @@
       ;; each text component was given a unique id it still would mess with
       ;; colors on Android. In case if entire component is built without lists
       ;; inside it works just fine on both platforms.
-      (reduce
-       (fn [acc [type text]]
-         (conj
-          acc
-          [rn/text (when (= type :mention)
-                     {:style {:color "#0DA4C9"}})
-           text]))
-       [:<>]
-       input-with-mentions)]]))
+      (for [[idx [type text]] (map-indexed
+                               (fn [idx item]
+                                 [idx item])
+                               input-with-mentions)]
+        ^{:key (str idx "_" text)}
+        [rn/text (when (= type :mention)
+                   {:style {:color "#0DA4C9"}})
+         text])
+      #_(conj
+       (reduce
+            (fn [acc [type text]]
+              (conj
+               acc
+               [rn/text (when (= type :mention)
+                          {:style {:color "#0DA4C9"}})
+                text]))
+            [:<>]
+            input-with-mentions)
+       [rn/text {} ""])]]))
 
 (defn mention-item
   [[public-key {:keys [alias name nickname] :as user}] _ _ text-input-ref]
