@@ -66,6 +66,10 @@
 (fx/defn handle-removed-filters [cofx filters]
   (models.filters/handle-filters-removed cofx (map models.filters/responses->filters filters)))
 
+(fx/defn handle-request-to-join [{:keys [db]} r]
+  (let [{:keys [id community-id] :as request} (<-request-to-join-community-rpc r)]
+    {:db (assoc-in db [:communities/requests-to-join community-id id] request)}))
+
 (fx/defn handle-removed-chats [{:keys [db]} chat-ids]
   {:db (reduce (fn [db chat-id]
                  (update db :chats dissoc chat-id))
@@ -388,13 +392,14 @@
 (fx/defn request-to-join-accepted
   {:events [::request-to-join-accepted]}
   [{:keys [db] :as cofx} community-id request-id response]
-  (log/debug "communit-id" community-id)
-  (log/debug "request-id" request-id)
-  (log/debug "response" response)
   (fx/merge cofx
             {:db (update-in db [:communities/requests-to-join community-id] dissoc request-id)}
             (handle-response response)))
 
+(fx/defn request-to-join-declined
+  {:events [::request-to-join-declined]}
+  [{:keys [db] :as cofx} community-id request-id]
+  {:db (update-in db [:communities/requests-to-join community-id] dissoc request-id)})
 
 (fx/defn accept-request-to-join-pressed
   {:events [:communities.ui/accept-request-to-join-pressed]}
@@ -403,3 +408,11 @@
                      :params     [{:id request-id}]
                      :on-success #(re-frame/dispatch [::request-to-join-accepted community-id request-id %])
                      :on-error   #(log/error "failed to accept requests-to-join" community-id request-id %)}]})
+
+(fx/defn decline-request-to-join-pressed
+  {:events [:communities.ui/decline-request-to-join-pressed]}
+  [cofx community-id request-id]
+  {::json-rpc/call [{:method     "wakuext_declineRequestToJoinCommunity"
+                     :params     [{:id request-id}]
+                     :on-success #(re-frame/dispatch [::request-to-join-declined community-id request-id %])
+                     :on-error   #(log/error "failed to decline requests-to-join" community-id request-id)}]})

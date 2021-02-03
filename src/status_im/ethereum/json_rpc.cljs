@@ -128,6 +128,7 @@
    "wakuext_communities" {}
    "wakuext_importCommunity" {}
    "wakuext_exportCommunity" {}
+   "wakuext_ensVerified" {}
    "status_chats" {}
    "localnotifications_switchWalletNotifications" {}
    "localnotifications_notificationPreferences" {}

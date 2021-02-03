@@ -15,7 +15,7 @@
   (>evt [:bottom-sheet/hide])
   (>evt event))
 
-(defn member-sheet [{:keys [public-key] :as member} community-id admin]
+(defn member-sheet [{:keys [public-key] :as member} community-id can-manage-users?]
   [:<>
    [quo/list-item
     {:theme               :accent
@@ -26,7 +26,7 @@
      :accessibility-label :view-chat-details-button
      :chevron             true
      :on-press            #(hide-sheet-and-dispatch  [:chat.ui/show-profile public-key])}]
-   (when admin
+   (when can-manage-users?
      [:<>
       [quo/separator {:style {:margin-vertical 8}}]
       [quo/list-item {:theme    :negative
@@ -39,7 +39,7 @@
                         :title    (i18n/label :t/member-ban)
                         :on-press #(>evt [::communities/member-ban community-id public-key])}]])])
 
-(defn render-member [public-key _ _ {:keys [community-id admin]}]
+(defn render-member [public-key _ _ {:keys [community-id can-manage-users?]}]
   (let [member (or (<sub [:contacts/contact-by-identity public-key])
                    {:public-key public-key})]
     [quo/list-item
@@ -48,7 +48,7 @@
       :icon                [chat-icon/contact-icon-contacts-tab
                             (multiaccounts/displayed-photo member)]
       :accessory           [quo/button {:on-press            #(>evt [:bottom-sheet/show-sheet
-                                                                     {:content (fn [] [member-sheet member community-id admin])}])
+                                                                     {:content (fn [] [member-sheet member community-id can-manage-users?])}])
                                         :type                :icon
                                         :theme               :icon
                                         :accessibility-label :menu-option}
