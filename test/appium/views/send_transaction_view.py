@@ -167,18 +167,18 @@ class SendTransactionView(BaseView):
         return address[:6] + '…' + address[-4:]
 
     def get_username_in_transaction_bottom_sheet_button(self, username_part):
-        self.driver.info("**Getting username by '%s' in transaction fee bottom sheet" % username_part)
+        self.driver.info("**Getting username by '%s' in transaction fee bottom sheet**" % username_part)
         return SilentButton(self.driver, xpath="//*[@content-desc='amount-input']/..//*[starts-with(@text,'%s')]" % username_part)
 
     def get_account_in_select_account_bottom_sheet_button(self, account_name):
-        self.driver.info("**Getting account by '%s' in transaction fee bottom sheet" % account_name)
+        self.driver.info("**Getting account by '%s' in transaction fee bottom sheet**" % account_name)
         return SilentButton(self.driver, translation_id="select-account", suffix="/..//*[starts-with(@text,'%s')]" % account_name)
 
     def get_validation_icon(self, field='Network fee'):
         return ValidationErrorOnSendTransaction(self.driver, field)
 
     def get_values_from_send_transaction_bottom_sheet(self, gas=False):
-        self.driver.info("**Getting values from send transaction bottom sheet")
+        self.driver.info("**Getting values from send transaction bottom sheet**")
         data = {
             'amount': self.amount_edit_box.text,
             'asset': self.asset_text.text,
@@ -193,7 +193,7 @@ class SendTransactionView(BaseView):
         return data
 
     def add_to_favorites(self, name):
-        self.driver.info("**Adding '%s' to favorite recipients" % name)
+        self.driver.info("**Adding '%s' to favorite recipients**" % name)
         self.recipient_add_to_favorites.click()
         self.new_favorite_name_input.set_value(name)
         self.new_favorite_add_favorite.click()
