@@ -24,8 +24,7 @@
             [status-im.chat.models.reactions :as models.reactions]
             [status-im.pairing.core :as pairing]
             [status-im.signing.gas :as signing.gas]
-            #_[status-im.tribute-to-talk.core :as tribute-to-talk]
-            [status-im.tribute-to-talk.db :as tribute-to-talk.db]
+            
             [status-im.ui.components.colors :as colors]
             [status-im.ui.screens.add-new.new-public-chat.db :as db]
             [status-im.ui.screens.mobile-network-settings.utils
