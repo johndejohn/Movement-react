@@ -62,6 +62,7 @@
 (def profile-pictures-visibility-none 3)
 
 (def min-password-length 6)
+(def min-group-chat-participants 20)
 (def max-group-chat-participants 10000)
 (def default-number-of-messages 20)
 

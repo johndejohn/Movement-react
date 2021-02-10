@@ -84,6 +84,7 @@
                 } else if (data.isAllowed) {
                     if (data.permission == 'web3') {
                         window.statusAppcurrentAccountAddress = data.data[0];
+                        window.ethereum.emit("accountsChanged", data.data);
                     }
                     callback.resolve(data.data);
                 } else {
@@ -152,6 +153,30 @@
     EthereumProvider.prototype.status = new StatusAPI();
     EthereumProvider.prototype.isConnected = function () { return true; };
 
+    EthereumProvider.prototype._events = {};
+
+    EthereumProvider.prototype.on = function(name, listener) {
+        if (!this._events[name]) {
+          this._events[name] = [];
+        }
+        this._events[name].push(listener);
+    }
+
+    EthereumProvider.prototype.removeListener = function (name, listenerToRemove) {
+        if (!this._events[name]) {
+          return
+        }
+
+        const filterListeners = (listener) => listener !== listenerToRemove;
+        this._events[name] = this._events[name].filter(filterListeners);
+    }
+
+    EthereumProvider.prototype.emit = function (name, data) {
+        if (!this._events[name]) {
+          return
+        }
+        this._events[name].forEach(cb => cb(data));
+    }
     EthereumProvider.prototype.enable = function () {
         return sendAPIrequest('web3');
     };
@@ -160,11 +185,14 @@
         return sendAPIrequest('qr-code', {regex: regex});
     };
 
+<<<<<<< HEAD
     EthereumProvider.prototype.on = function (type, handler)
     {
         console.log("Not supported by Movement")
     }
 
+=======
+>>>>>>> 63893ff57599cfc1fed33da5d0f8f227f59e4192
     EthereumProvider.prototype.request = function (requestArguments)
     {
          if (!requestArguments) {

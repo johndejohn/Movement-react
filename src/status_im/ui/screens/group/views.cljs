@@ -107,7 +107,8 @@
                         :title      (i18n/label :t/new-group-chat)
                         :subtitle   (i18n/label :t/group-chat-members-count
                                                 {:selected (inc (count contacts))
-                                                 :max      constants/max-group-chat-participants})}]
+                                                 :max      constants/max-group-chat-participants
+                                                 :min      constants/min-group-chat-participants})}]
         [react/view {:style {:padding-top 16
                              :flex        1}}
          [react/view {:style {:padding-horizontal 16}}
