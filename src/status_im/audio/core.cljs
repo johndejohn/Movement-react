@@ -14,7 +14,7 @@
 (def default-recorder-options {:filename "recording.aac"
                                :bitrate 32000
                                :channels 1
-                               :sampleRate 22050
+                               :sampleRate 48000
                                :quality "medium" ; ios only
                                :meteringInterval 50})
 

@@ -30,7 +30,7 @@
     ;; Set default-value as otherwise it will
     ;; be erased in global `onWillBlur` handler
     :default-value       topic
-    :placeholder         "chat-name"
+    :placeholder         "house-name"
     :return-key-type     :go
     :auto-correct        false
     :error               error}])
@@ -65,7 +65,7 @@
         lang3 (subs (name i18n-resources/default-device-language) 0 3)
         lang-name (or (get lang-names lang3) (get lang-names lang))]
     (when-not (= lang "en")
-      (or lang-name (str "status-" lang)))))
+      (or lang-name (str "movement-" lang)))))
 
 (def section-featured "Featured")
 

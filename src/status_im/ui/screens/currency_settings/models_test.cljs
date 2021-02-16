@@ -3,12 +3,12 @@
             [status-im.ui.screens.currency-settings.models :as models]))
 
 (deftest get-currency
-  (is (= :usd (models/get-currency {:multiaccount {:currency :usd}})))
+  (is (= :int (models/get-currency {:multiaccount {:currency :int}})))
   (is (= :usd (models/get-currency {:multiaccount {:not-empty "would throw an error if was empty"}})))
   (is (= :aud (models/get-currency {:multiaccount {:currency :aud}}))))
 
 (deftest set-currency
-  (let [cofx (models/set-currency {:db {:multiaccount {:not-empty "would throw an error if was empty"}}} :usd)]
-    (is (= :usd (get-in cofx [:db :multiaccount :currency]))))
+  (let [cofx (models/set-currency {:db {:multiaccount {:not-empty "would throw an error if was empty"}}} :int)]
+    (is (= :int (get-in cofx [:db :multiaccount :currency]))))
   (is (= :jpy (get-in (models/set-currency {:db {:multiaccount {:not-empty "would throw an error if was empty"}}} :jpy)
                       [:db :multiaccount :currency]))))

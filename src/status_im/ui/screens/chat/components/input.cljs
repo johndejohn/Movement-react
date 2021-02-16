@@ -312,16 +312,18 @@
                                       (not sending-image)
                                       (not reply))
             show-image           (and empty-text
-                                      (not reply)
-                                      (not public?))
+                                      (not reply))
+                                      
             show-extensions      (and empty-text
                                       one-to-one-chat?
+                                      public?
+                                      
                                       (or config/commands-enabled? mainnet?)
                                       (not reply))
             show-audio           (and empty-text
                                       (not sending-image)
-                                      (not reply)
-                                      (not public?))]
+                                      (not reply))]
+                                      
         (when-not (= reply @had-reply)
           (reset! had-reply reply)
           (when reply

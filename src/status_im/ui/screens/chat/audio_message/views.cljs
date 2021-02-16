@@ -47,9 +47,9 @@
                    {:filename (str base-filename default-format)
                     :meteringInterval metering-interval}))
 
-;; maximum 5 minutes of recordings time
+;; maximum 2 minutes of recordings time
 ;; to keep data under 900k
-(def max-recording-ms (* 5 60 1000))
+(def max-recording-ms (* 2 60 1000))
 
 ;; audio objects
 (defonce recorder-ref (atom nil))
