@@ -315,9 +315,7 @@
                                       (not reply))
                                       
             show-extensions      (and empty-text
-                                      one-to-one-chat?
-                                      public?
-                                      
+            
                                       (or config/commands-enabled? mainnet?)
                                       (not reply))
             show-audio           (and empty-text
