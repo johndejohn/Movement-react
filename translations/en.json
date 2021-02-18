@@ -1390,12 +1390,12 @@
     "not-connected-to-peers": "Not connected to any peers",
     "unable-to-send-messages": "Unable to send and receive messages",
     "can-send-messages": "You can send and receive new messages",
-    "not-connected-nodes": "Not connected to a status node",
+    "not-connected-nodes": "Not connected to a MovementX",
     "unable-to-fetch": "Unable to fetch chat history",
-    "nodes-disabled": "Status nodes disabled",
+    "nodes-disabled": "MovementX disabled",
     "waiting-wi-fi": "Waiting for Wi-Fi…",
     "you-can-fetch": "You can fetch chat history",
     "youre-on-mobile-network": "You’re on mobile network",
-    "status-mobile-descr": "Status tends to use a lot of data when syncing chats. You can choose not to sync when on mobile network",
+    "status-mobile-descr": "Movement tends to use a lot of data when syncing chats. You can choose not to sync when on mobile network",
     "restore-defaults": "Restore Defaults"
 }
