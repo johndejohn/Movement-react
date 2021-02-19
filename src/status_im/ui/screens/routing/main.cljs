@@ -6,13 +6,13 @@
             [status-im.ui.screens.stickers.views :as stickers]
             [status-im.ui.screens.home.views :as home]
             [status-im.ui.screens.add-new.new-chat.views :as new-chat]
-            [status-im.ui.screens.add-new.new-chat.events :as new-chat.events]
+            [status-im.add-new.core :as new-chat.events]
             [status-im.ui.screens.routing.intro-login-stack :as intro-login-stack]
             [status-im.ui.screens.routing.chat-stack :as chat-stack]
             [status-im.ui.screens.routing.wallet-stack :as wallet-stack]
+            [status-im.ui.screens.wallet.buy-crypto.views :as wallet.buy-crypto]
             [status-im.ui.screens.routing.key-storage-stack :as key-storage-stack]
             [status-im.ui.screens.group.views :as group-chat]
-            [status-im.ui.screens.group.events :as group.events]
             [status-im.ui.screens.routing.profile-stack :as profile-stack]
             [status-im.ui.screens.routing.browser-stack :as browser-stack]
             [status-im.ui.components.tabbar.core :as tabbar]
@@ -105,7 +105,7 @@
         :insets     {:bottom true}
         :component  invite/referral-invite}
        {:name       :add-participants-toggle-list
-        :on-focus   [::group.events/add-participants-toggle-list]
+        :on-focus   [:group/add-participants-toggle-list]
         :transition :presentation-ios
         :insets     {:bottom true}
         :component  group-chat/add-participants-toggle-list}
@@ -152,6 +152,14 @@
         :transition :presentation-ios
         :insets     {:bottom true}
         :component  contact/profile}
+       {:name       :buy-crypto
+        :transition :presentation-ios
+        :insets     {:bottom true}
+        :component wallet.buy-crypto/container}
+       {:name       :buy-crypto-website
+        :transition :presentation-ios
+        :insets     {:bottom true}
+        :component  wallet.buy-crypto/website}
        {:name      :key-storage-stack
         :component key-storage-stack/key-storage-stack}]
 

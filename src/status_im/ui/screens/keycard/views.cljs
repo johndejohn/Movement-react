@@ -1,11 +1,11 @@
 (ns status-im.ui.screens.keycard.views
   (:require [re-frame.core :as re-frame]
             [reagent.core :as reagent]
-            [status-im.i18n :as i18n]
+            [status-im.i18n.i18n :as i18n]
             [status-im.multiaccounts.core :as multiaccounts]
             [status-im.react-native.resources :as resources]
             [status-im.ui.components.colors :as colors]
-            [status-im.ui.components.icons.vector-icons :as vector-icons]
+            [status-im.ui.components.icons.icons :as icons]
             [quo.core :as quo]
             [status-im.ui.components.toolbar :as toolbar]
             [status-im.ui.components.react :as react]
@@ -13,6 +13,7 @@
             [status-im.ui.screens.chat.photos :as photos]
             [status-im.ui.screens.keycard.pin.views :as pin.views]
             [status-im.ui.screens.keycard.styles :as styles]
+            [status-im.ui.screens.intro.styles :as intro-styles]
             [status-im.constants :as constants]
             [status-im.keycard.login :as keycard.login]
             [status-im.ui.screens.keycard.frozen-card.view :as frozen-card.view])
@@ -155,8 +156,8 @@
         [react/text {:style {:text-align :center
                              :color      colors/blue}}
          (i18n/label :t/learn-more-about-keycard)]
-        [vector-icons/tiny-icon :tiny-icons/tiny-external {:color           colors/blue
-                                                           :container-style {:margin-left 5}}]]]]]
+        [icons/tiny-icon :tiny-icons/tiny-external {:color           colors/blue
+                                                    :container-style {:margin-left 5}}]]]]]
     [react/view {:margin-bottom 32}
      [quo/button {:on-press #(re-frame/dispatch [:navigate-back])}
       (i18n/label :t/ok-got-it)]]]])
@@ -192,7 +193,7 @@
        :align-items      :center
        :justify-content  :center
        :border-radius    20}}
-     [vector-icons/icon
+     [icons/icon
       :main-icons/check
       {:color colors/green}]]
     [react/text {:style {:typography :header}}
@@ -200,10 +201,9 @@
     [react/text (i18n/label :t/keycard-can-use-with-new-passcode)]]
    (when-not hide-login-actions?
      [react/view
-      {:style {:width         160
+      {:style {:width         260
                :margin-bottom 15}}
-      [react/view {:flex-direction :row
-                   :height         52}
+      [react/view intro-styles/buttons-container
        [quo/button {:on-press #(re-frame/dispatch
                                 [::keycard.login/login-after-reset])}
         (i18n/label :t/open)]]])])
@@ -224,7 +224,7 @@
                  :border-radius    16
                  :align-items      :center
                  :justify-content  :center}
-     [vector-icons/icon
+     [icons/icon
       :main-icons/cancel
       {:color  colors/red
        :width  20

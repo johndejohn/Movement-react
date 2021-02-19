@@ -8,7 +8,7 @@
             [status-im.keycard.recovery :as recovery]
             [status-im.keycard.onboarding :as onboarding]
             status-im.keycard.fx
-            [status-im.ui.components.bottom-sheet.core :as bottom-sheet]
+            [status-im.bottom-sheet.core :as bottom-sheet]
             [status-im.signing.core :as signing.core]))
 
 (fx/defn login-got-it-pressed
@@ -123,7 +123,7 @@
 
       (and (zero? pin-retry-counter)
            (or (nil? puk-retry-counter)
-               (= 5 puk-retry-counter)))
+               (pos? puk-retry-counter)))
       nil #_(frozen-keycard-popup cofx)
 
       :else

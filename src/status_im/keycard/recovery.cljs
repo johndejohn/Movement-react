@@ -4,14 +4,14 @@
             [status-im.multiaccounts.create.core :as multiaccounts.create]
             [status-im.utils.fx :as fx]
             [re-frame.core :as re-frame]
-            [status-im.i18n :as i18n]
+            [status-im.i18n.i18n :as i18n]
             [taoensso.timbre :as log]
             [status-im.keycard.common :as common]
             status-im.keycard.fx
             [status-im.constants :as constants]
             [status-im.ethereum.eip55 :as eip55]
             [status-im.ethereum.core :as ethereum]
-            [status-im.ui.components.bottom-sheet.core :as bottom-sheet]
+            [status-im.bottom-sheet.core :as bottom-sheet]
             [status-im.utils.platform :as platform]))
 
 (fx/defn pair* [_ password]
@@ -215,6 +215,7 @@
                                      (update :instance-uid #(get-in db [:keycard :multiaccount :instance-uid] %))))
                        (assoc-in [:keycard :multiaccount-wallet-address] (:wallet-address account-data))
                        (assoc-in [:keycard :multiaccount-whisper-public-key] (:whisper-public-key account-data))
+                       (assoc-in [:keycard :pin :status] nil)
                        (assoc-in [:keycard :application-info :key-uid]
                                  (ethereum/normalized-hex (:key-uid account-data)))
                        (update :keycard dissoc :recovery-phrase)
@@ -246,6 +247,7 @@
     (fx/merge cofx
               {:db                  (-> db
                                         (assoc-in [:keycard :multiaccount :instance-uid] instance-uid)
+                                        (assoc-in [:keycard :pin :status] :verifying)
                                         (assoc-in [:keycard :secrets] {:pairing   pairing'
                                                                        :paired-on (utils.datetime/timestamp)}))
                :keycard/get-keys {:pairing    pairing'

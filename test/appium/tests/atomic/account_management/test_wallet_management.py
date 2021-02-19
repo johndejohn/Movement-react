@@ -106,7 +106,8 @@ class TestWalletManagement(SingleDeviceTestCase):
 
         wallet.just_fyi('Check "Open in OpenSea"')
         wallet.element_by_translation_id("check-on-opensea").click()
-        wallet.element_by_text('Sign In').click()
+
+        wallet.element_by_text('Sign In').wait_and_click(60)
         if not wallet.allow_button.is_element_displayed(40):
             self.errors.append('Can not sign in in OpenSea dapp')
         self.errors.verify_no_errors()
@@ -280,7 +281,7 @@ class TestWalletManagement(SingleDeviceTestCase):
         initial_STT = wallet.get_asset_amount_by_name('STT')
 
         wallet.just_fyi('Check individual account view (imported from private key), receive option')
-        wallet.get_account_by_name(account_name).click()
+        wallet.get_account_by_name(account_name).scroll_and_click(direction="up")
         if not wallet.send_transaction_button.is_element_displayed():
             self.errors.append('Send button is not shown on account added with private key')
         wallet.receive_transaction_button.click()
@@ -314,7 +315,7 @@ class TestWalletManagement(SingleDeviceTestCase):
         wallet.wait_balance_is_changed('MDS')
 
         wallet.just_fyi('Check account view and send option (imported from seed phrase)')
-        wallet.get_account_by_name(account_name).click()
+        wallet.get_account_by_name(account_name).scroll_and_click(direction="up")
         if not wallet.send_transaction_button.is_element_displayed():
             self.errors.append('Send button is not shown on account added with seed phrase')
         wallet.receive_transaction_button.click()

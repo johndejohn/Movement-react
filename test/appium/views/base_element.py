@@ -150,8 +150,8 @@ class BaseElement(object):
             raise NoSuchElementException(
                 "Device %s: %s by %s:* `%s` is not found on the screen" % (self.driver.number, self.name,  self.by, self.locator)) from None
 
-    def scroll_and_click(self):
-        self.scroll_to_element()
+    def scroll_and_click(self, direction='down'):
+        self.scroll_to_element(direction=direction)
         self.click()
 
     def is_element_present(self, sec=5):
@@ -343,7 +343,7 @@ class SilentButton(Button):
                 return self.driver.find_element(self.by, self.locator)
             except NoSuchElementException:
                 raise NoSuchElementException(
-                    "Device %s: '%s' is not found on the screen" % (self.driver.number, self.name)) from None
+                    "Device %s: '%s' by %s:'%s' not found on the screen" % (self.driver.number, self.name, self.by, self.locator)) from None
             except Exception as exception:
                 if 'Internal Server Error' in str(exception):
                     continue

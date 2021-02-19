@@ -16,7 +16,7 @@
             [status-im.group-chats.db :as group-chats.db]
             [status-im.communities.core :as communities]
             [status-im.group-chats.core :as group-chat]
-            [status-im.i18n :as i18n]
+            [status-im.i18n.i18n :as i18n]
             [status-im.multiaccounts.core :as multiaccounts]
             [status-im.multiaccounts.db :as multiaccounts.db]
             [status-im.multiaccounts.model :as multiaccounts.model]
@@ -24,12 +24,17 @@
             [status-im.chat.models.reactions :as models.reactions]
             [status-im.pairing.core :as pairing]
             [status-im.signing.gas :as signing.gas]
+<<<<<<< HEAD
             
             [status-im.ui.components.colors :as colors]
             [status-im.ui.screens.add-new.new-public-chat.db :as db]
             [status-im.ui.screens.mobile-network-settings.utils
              :as
              mobile-network-utils]
+=======
+            [status-im.add-new.db :as db]
+            [status-im.utils.mobile-sync :as mobile-network-utils]
+>>>>>>> f3c85c1e7a863f19b24bf3231a2036307228a275
             [status-im.utils.build :as build]
             [status-im.utils.config :as config]
             [status-im.utils.datetime :as datetime]
@@ -40,11 +45,9 @@
             [status-im.wallet.utils :as wallet.utils]
             [status-im.utils.utils :as utils]
             status-im.ui.screens.keycard.subs
-            status-im.ui.screens.keycard.settings.subs
-            status-im.ui.screens.keycard.pin.subs
-            status-im.ui.screens.keycard.setup.subs
             [status-im.chat.models.mentions :as mentions]
             [status-im.notifications.core :as notifications]
+            [status-im.utils.currency :as currency]
             [clojure.set :as clojure.set]))
 
 ;; TOP LEVEL ===========================================================================================================
@@ -64,7 +67,6 @@
 ;;general
 (reg-root-key-sub :sync-state :sync-state)
 (reg-root-key-sub :network-status :network-status)
-(reg-root-key-sub :network/type :network/type)
 (reg-root-key-sub :peers-count :peers-count)
 (reg-root-key-sub :about-app/node-info :node-info)
 (reg-root-key-sub :peers-summary :peers-summary)
@@ -96,7 +98,6 @@
 ;;profile
 (reg-root-key-sub :my-profile/seed :my-profile/seed)
 (reg-root-key-sub :my-profile/advanced? :my-profile/advanced?)
-(reg-root-key-sub :my-profile/editing? :my-profile/editing?)
 (reg-root-key-sub :my-profile/profile :my-profile/profile)
 
 ;;multiaccount
@@ -170,7 +171,6 @@
 (reg-root-key-sub :wallet/recipient :wallet/recipient)
 (reg-root-key-sub :wallet/favourites :wallet/favourites)
 (reg-root-key-sub :wallet/refreshing-history? :wallet/refreshing-history?)
-(reg-root-key-sub :wallet/buy-crypto-hidden :wallet/buy-crypto-hidden)
 (reg-root-key-sub :wallet/fetching-error :wallet/fetching-error)
 (reg-root-key-sub :wallet/non-archival-node :wallet/non-archival-node)
 
@@ -218,6 +218,8 @@
 (reg-root-key-sub :push-notifications/preferences :push-notifications/preferences)
 
 (reg-root-key-sub :acquisition :acquisition)
+
+(reg-root-key-sub :buy-crypto/on-ramps :buy-crypto/on-ramps)
 
 ;; communities
 (re-frame/reg-sub
@@ -1481,7 +1483,7 @@
  :wallet/currency
  :<- [:wallet.settings/currency]
  (fn [currency-id]
-   (get constants/currencies currency-id)))
+   (get currency/currencies currency-id)))
 
 (defn filter-recipient-favs
   [search-filter {:keys [name]}]
@@ -2128,7 +2130,7 @@
  :<- [:search/currency-filter]
  (fn [search-currency-filter]
    {:search-filter search-currency-filter
-    :currencies (apply-filter search-currency-filter constants/currencies extract-currency-attributes false)}))
+    :currencies (apply-filter search-currency-filter currency/currencies extract-currency-attributes false)}))
 
 (defn extract-token-attributes [token]
   (let [{:keys [symbol name]} token]
