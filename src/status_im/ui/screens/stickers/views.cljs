@@ -21,17 +21,17 @@
 (defview price-badge [price id owned? pending]
   (letsubs [chain   [:ethereum/chain-keyword]
             balance [:balance-default]]
-    (let [snt             (money/to-number (if (= :mainnet chain) (:SNT balance) (:STT balance)))
-          not-enough-snt? (> price snt)
-          no-snt?         (or (nil? snt) (zero? snt))]
+    (let [int             (money/to-number (if (= :mainnet chain) (:INT balance) (:STT balance)))
+          not-enough-int? (> price int)
+          no-int?         (or (nil? int) (zero? int))]
       [react/touchable-highlight {:on-press #(cond pending nil
                                                    (or owned? (zero? price))
                                                    (re-frame/dispatch [:stickers/install-pack id])
-                                                   (or no-snt? not-enough-snt?) nil
+                                                   (or no-int? not-enough-int?) nil
                                                    :else (re-frame/dispatch [:stickers/buy-pack id price]))}
-       [react/view (styles/price-badge (and (not (or owned? (zero? price))) (or no-snt? not-enough-snt?)))
+       [react/view (styles/price-badge (and (not (or owned? (zero? price))) (or no-int? not-enough-int?)))
         (when (and (not (zero? price)) (not owned?))
-          [icons/tiny-icon :tiny-icons/tiny-snt {:color colors/white-persist :container-style {:margin-right 6}}])
+          [icons/tiny-icon :tiny-icons/tiny-int {:color colors/white-persist :container-style {:margin-right 6}}])
         (if pending
           [react/activity-indicator {:animating true
                                      :color     colors/white-persist}]

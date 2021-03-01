@@ -10,11 +10,11 @@
 (def ERROR (.-ERROR ^js MediaStates))
 (def DESTROYED (.-DESTROYED ^js MediaStates))
 (def SEEKING (.-SEEKING ^js MediaStates))
-
+ 
 (def default-recorder-options {:filename "recording.aac"
                                :bitrate 32000
                                :channels 1
-                               :sampleRate 22050
+                               :sampleRate 48000
                                :quality "medium" ; ios only
                                :meteringInterval 50})
 

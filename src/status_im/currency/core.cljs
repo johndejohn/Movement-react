@@ -4,7 +4,7 @@
             [status-im.wallet.prices :as prices]))
 
 (defn get-currency [db]
-  (get-in db [:multiaccount :currency] :usd))
+  (get-in db [:multiaccount :currency] :int))
 
 (fx/defn set-currency
   {:events [:wallet.settings.ui/currency-selected]}

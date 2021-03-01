@@ -10,7 +10,7 @@
    :height        sticker-icon-size
    :border-radius (/ sticker-icon-size 2)})
 
-(defn price-badge [not-enough-snt?]
+(defn price-badge [not-enough-int?]
   {:background-color   (if not-enough-snt? colors/gray colors/blue)
    :border-radius      14
    :flex-direction     :row

@@ -71,7 +71,7 @@
            (if erc20?
              (parse-token-transfer chain-tokens contract)
              ;; this is not a ERC20 token transaction
-             {:symbol :ETH}))))
+             {:symbol :INT}))))
 
 (defn enrich-transfers
   [chain-tokens transfers]

@@ -7,7 +7,7 @@
   (memoize
    (fn []
      {:name     "Native"
-      :symbol   :ETH
+      :symbol   :INT
       :decimals 18
       :icon     {:source (js/require "../resources/images/tokens/default-native.png")}})))
 
@@ -15,23 +15,23 @@
 
 (def all-native-currencies
   (ethereum.macros/resolve-native-currency-icons
-   {:mainnet {:name     "Ether"
-              :symbol   :ETH
+   {:mainnet {:name     "Inter"
+              :symbol   :INT
               :decimals 18}
-    :testnet {:name           "Ropsten Ether"
-              :symbol         :ETH
-              :symbol-display :ETHro
+    :testnet {:name           "Ropsten Inter"
+              :symbol         :INT
+              :symbol-display :INTro
               :decimals       18}
-    :rinkeby {:name           "Rinkeby Ether"
-              :symbol         :ETH
-              :symbol-display :ETHri
+    :rinkeby {:name           "Rinkeby Inter"
+              :symbol         :INT
+              :symbol-display :INTri
               :decimals       18}
     :poa     {:name           "POA"
-              :symbol         :ETH
+              :symbol         :INT
               :symbol-display :POA
               :decimals       18}
     :xdai    {:name            "xDAI"
-              :symbol          :ETH
+              :symbol          :INT
               :symbol-display  :xDAI
               :symbol-exchange :DAI
               :decimals        18}}))

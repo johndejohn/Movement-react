@@ -33,7 +33,7 @@
                                      :last-day (:OPEN24HOUR entry)}}))}))
     (into {} (for [[_ entries] (:RAW (types/json->clj resp))]
                {:ETH (into {} (for [[to entry] entries]
-                                {to {:from     "ETH"
+                                {to {:from     "INT"
                                      :to       (name to)
                                      :price    (:PRICE entry)
                                      :last-day (:OPEN24HOUR entry)}}))}))))

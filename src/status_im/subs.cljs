@@ -1287,7 +1287,7 @@
  :wallet.settings/currency
  :<- [:multiaccount]
  (fn [settings]
-   (or (get settings :currency) :usd)))
+   (or (get settings :currency) :int)))
 
 (defn- get-balance-total-value
   [balance prices currency token->decimals]
@@ -1666,7 +1666,7 @@
      (when transaction
        (merge transaction
               {:gas-price-eth  (if gas-price
-                                 (money/wei->str :eth
+                                 (money/wei->str :int
                                                  gas-price
                                                  native-currency-text)
                                  "-")
@@ -1683,7 +1683,7 @@
                  :nonce     (i18n/label :not-applicable)
                  :hash      (i18n/label :not-applicable)}
                 {:cost (when gas-used
-                         (money/wei->str :eth
+                         (money/wei->str :int
                                          (money/fee-value gas-used gas-price)
                                          native-currency-text))
                  :url  (transactions/get-transaction-details-url
@@ -2249,8 +2249,8 @@
          (assoc :fiat-amount
                 (money/fiat-amount-value (:amount message)
                                          (:currency message)
-                                         :USD prices)
-                :fiat-currency "USD")
+                                         :INT prices)
+                :fiat-currency "INT")
          (and (:receiver message) wallet-acc)
          (assoc :account wallet-acc)))
      sign)))
@@ -2284,8 +2284,8 @@
   [gas-error-message balance symbol amount ^js gas ^js gasPrice]
   (if (and gas gasPrice)
     (let [^js fee (.times gas gasPrice)
-          ^js available-ether (money/bignumber (get balance :ETH 0))
-          ^js available-for-gas (if (= :ETH symbol)
+          ^js available-ether (money/bignumber (get balance :INT 0))
+          ^js available-for-gas (if (= :INT symbol)
                                   (.minus available-ether (money/bignumber amount))
                                   available-ether)]
       (merge {:gas-error-state (when gas-error-message :gas-is-set)}

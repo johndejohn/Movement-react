@@ -88,9 +88,9 @@
   (let [visible (reagent/atom false)]
     (fn [{:keys [content] :as message} on-long-press]
       [:<>
-       [preview/preview-image {:message   (assoc message :cant-be-replied true)
+       [preview/preview-image {:message   (assoc message :cant-be-replied false)
                                :visible   @visible
-                               :can-reply false
+                               :can-reply true
                                :on-close  #(do (reset! visible false)
                                                (reagent/flush))}]
        [react/touchable-highlight {:on-press (fn [_]

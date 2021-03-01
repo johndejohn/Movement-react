@@ -152,7 +152,7 @@ update-fleets: ##@prepare Download up-to-date JSON file with current fleets stat
 		> resources/config/fleets.json
 
 keystore: export TARGET := keytool
-keystore: export KEYSTORE_PATH ?= $(HOME)/.gradle/status-im.keystore
+keystore: export KEYSTORE_PATH ?= $(HOME)/movement-keystore.keystore
 keystore: ##@prepare Generate a Keystore for signing Android APKs
 	@./scripts/generate-keystore.sh
 
@@ -165,7 +165,7 @@ release-android: export TARGET := default
 release-android: export BUILD_ENV ?= prod
 release-android: export BUILD_TYPE ?= nightly
 release-android: export BUILD_NUMBER ?= $(TMP_BUILD_NUMBER)
-release-android: export KEYSTORE_PATH ?= $(HOME)/.gradle/status-im.keystore
+release-android: export KEYSTORE_PATH ?= $(HOME)/movement-keystore.keystore
 release-android: export ANDROID_APK_SIGNED ?= true
 release-android: export ANDROID_ABI_SPLIT ?= false
 release-android: export ANDROID_ABI_INCLUDE ?= armeabi-v7a;arm64-v8a;x86

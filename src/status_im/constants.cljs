@@ -59,7 +59,12 @@
 (def ^:const profile-pictures-visibility-none 3)
 
 (def ^:const min-password-length 6)
-(def ^:const max-group-chat-participants 20)
+(def max-1-group-chat-participants 20)
+(def max-2-group-chat-participants 100)
+(def max-3-group-chat-participants 500)
+(def max-4-group-chat-participants 1000)
+(def max-5-group-chat-participants 5000)
+(def max-group-chat-participants 10000)
 (def ^:const default-number-of-messages 20)
 
 (def ^:const mailserver-password "status-offline-inbox")
