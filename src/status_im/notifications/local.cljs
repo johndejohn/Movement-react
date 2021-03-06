@@ -41,17 +41,18 @@
   [{:keys [title message icon user-info channel-id type]
     :as   notification
     :or   {channel-id "status-im-notifications"}}]
-  (pn-android/present-local-notification
-   (merge {:channelId channel-id
-           :title     title
-           :message   message
-           :showBadge false}
-          (when user-info
-            {:userInfo (bean/->js user-info)})
-          (when icon
-            {:largeIconUrl (:uri (react/resolve-asset-source icon))})
-          (when (= type "message")
-            notification))))
+  (when notification
+    (pn-android/present-local-notification
+     (merge {:channelId channel-id
+             :title     title
+             :message   message
+             :showBadge false}
+            (when user-info
+              {:userInfo (bean/->js user-info)})
+            (when icon
+              {:largeIconUrl (:uri (react/resolve-asset-source icon))})
+            (when (= type "message")
+              notification)))))
 
 (defn handle-notification-press [{{deep-link :deepLink} :userInfo
                                   interaction           :userInteraction}]
@@ -107,6 +108,7 @@
      :user-info notification
      :message   description}))
 
+
 (defn show-message-pn?
   [{{:keys [app-state multiaccount]} :db :as cofx}
    {{:keys [message chat]} :body}]
@@ -122,6 +124,7 @@
                     (get multiaccount :public-key))))))
 
 (defn create-message-notification
+
   ([cofx notification]
    (when (or (nil? cofx)
              (show-message-pn? cofx notification))
@@ -155,6 +158,50 @@
       :identicon        (get contact :identicon)
       :whisperTimestamp (get message :whisperTimestamp)
       :text             (reply/get-quoted-text-with-mentions (:parsedText message))})))
+
+  ([{:keys [db] :as cofx} {{:keys [message]} :body :as notification}]
+   (when-not (nil? cofx)
+     (let [chat         (chat-by-message db message)
+           contact-id   (get message :from)
+           contact      (get-in db [:contacts/contacts contact-id])
+           notification (assoc notification
+                               :chat chat
+                               :contact-id contact-id
+                               :contact contact)]
+       (when (show-message-pn? cofx notification)
+         (create-message-notification notification)))))
+  ([{{:keys [message]} :body
+     {:keys [chat-type chat-id] :as chat} :chat
+     {:keys [identicon]} :contact
+     contact-id :contact-id}]
+   (when (and chat-type chat-id)
+     (let [contact-name @(re-frame/subscribe
+                          [:contacts/contact-name-by-identity contact-id])
+           group-chat?  (not= chat-type constants/one-to-one-chat-type)
+           title        (clojure.string/join
+                         " "
+                         (cond-> [contact-name]
+                           group-chat?
+                           (conj
+                            ;; TODO(rasom): to be translated
+                            "in")
+
+                           group-chat?
+                           (conj
+                            (str (when (contains? #{constants/public-chat-type
+                                                    constants/community-chat-type}
+                                                  chat-type)
+                                   "#")
+                                 (get chat :name)))))]
+       {:type             "message"
+        :chatType         (str chat-type)
+        :from             title
+        :chatId           chat-id
+        :alias            title
+        :identicon        (or identicon (identicon/identicon contact-id))
+        :whisperTimestamp (get message :whisperTimestamp)
+        :text             (reply/get-quoted-text-with-mentions (:parsedText message))})))
+
 
 (defn create-notification
   ([notification]
