@@ -20,7 +20,7 @@
    [status-im.utils.fx :as fx]))
 
 ;; reference db levels
-(def total-silence-db -140)
+(def total-silence-db -120)
 (def silence-db -10)
 (def max-db 0)
 

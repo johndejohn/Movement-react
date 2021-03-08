@@ -17,8 +17,8 @@
 
 (defn main-tab? [view-id]
   (contains?
-   #{:chat-stack :browser-stack :wallet-stack :profile-stack :status-stack
-     :status :home :wallet :empty-tab :my-profile :wallet-onboarding-setup}
+   #{:chat-stack :wallet-stack :profile-stack 
+     :home :wallet :my-profile :wallet-onboarding-setup}
    view-id))
 
 (def tabs-list-data
@@ -28,18 +28,12 @@
                            :icon  :main-icons/message}
      :count-subscription  :chats/unread-messages-number
      :accessibility-label :home-tab-button}
-    {:nav-stack           :browser-stack
-     :content             {:title (i18n/label :t/browser)
-                           :icon  :main-icons/browser}
-     :accessibility-label :dapp-tab-button}
+
     {:nav-stack           :wallet-stack
      :content             {:title (i18n/label :t/wallet)
                            :icon  :main-icons/wallet}
      :accessibility-label :wallet-tab-button}
-    {:nav-stack           :status-stack
-     :content             {:title (i18n/label :t/status)
-                           :icon  :main-icons/status}
-     :accessibility-label :status-tab-button}
+    
     {:nav-stack           :profile-stack
      :content             {:title (i18n/label :t/profile)
                            :icon  :main-icons/user-profile}

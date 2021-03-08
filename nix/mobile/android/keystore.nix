@@ -17,7 +17,7 @@ let
   KEYSTORE_KEY_PASSWORD = getAttr "KEYSTORE_KEY_PASSWORD" gradleProps;
 
 in stdenv.mkDerivation {
-  name = "status-react-android-keystore";
+  name = "movement-keystore";
 
   buildInputs = [ pkgs.openjdk8 ];
 

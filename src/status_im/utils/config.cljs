@@ -37,14 +37,14 @@
 ;; NOTE: only disabled in releases
 (def local-notifications? (enabled? (get-config :LOCAL_NOTIFICATIONS "1")))
 (def blank-preview? (enabled? (get-config :BLANK_PREVIEW "1")))
-(def group-chat-enabled? (enabled? (get-config :GROUP_CHATS_ENABLED "0")))
+(def group-chat-enabled? (enabled? (get-config :GROUP_CHATS_ENABLED "1")))
 (def tooltip-events? (enabled? (get-config :TOOLTIP_EVENTS "0")))
-(def commands-enabled? (enabled? (get-config :COMMANDS_ENABLED "0")))
+(def commands-enabled? (enabled? (get-config :COMMANDS_ENABLED "1")))
 (def keycard-test-menu-enabled? (enabled? (get-config :KEYCARD_TEST_MENU "0")))
 (def qr-test-menu-enabled? (enabled? (get-config :QR_READ_TEST_MENU "0")))
-(def referrals-invite-enabled? (enabled? (get-config :ENABLE_REFERRAL_INVITE "0")))
+(def referrals-invite-enabled? (enabled? (get-config :ENABLE_REFERRAL_INVITE "1")))
 (def quo-preview-enabled? (enabled? (get-config :ENABLE_QUO_PREVIEW "0")))
-(def google-free (enabled? (get-config :GOOGLE_FREE "0")))
+(def google-free (enabled? (get-config :GOOGLE_FREE "1")))
 (def communities-enabled? (enabled? (get-config :COMMUNITIES_ENABLED "1")))
 (def communities-management-enabled? (and (enabled? (get-config :COMMUNITIES_MANAGEMENT_ENABLED "1"))
                                           communities-enabled?))
@@ -76,7 +76,7 @@
 (def default-multiaccount
   {:preview-privacy?      blank-preview?
    :wallet/visible-tokens {:mainnet #{:SNT}}
-   :currency :usd
+   :currency :int
    :appearance 0
    :profile-pictures-visibility 1
    :log-level log-level

@@ -126,7 +126,7 @@
     "chaos-unicorn-day": "Chaos Unicorn Day",
     "chaos-unicorn-day-details": "🦄🦄🦄🦄🦄🦄🦄🚀!",
     "chat": "Chat",
-    "chat-and-transact": "Chat and transact privately with friends",
+    "chat-and-transact": "Talk or transact privately with friends",
     "chat-key": "Chat key",
     "chat-name": "house name",
     "chat-settings": "Chat settings",
@@ -542,9 +542,9 @@
     "fleet": "Fleet",
     "fleet-settings": "Fleet settings",
 
-    "follow-your-interests": "Jump into a public house and meet new people",
+    "follow-your-interests": "Top trending topics 🏆",
 
-    "follow-your-interests": "Jump into a public chat and meet new people",
+    "follow-your-interests": "Top trending topics 🏆",
     "follow": "Follow",
 
     "free": "↓ Free",
@@ -1311,7 +1311,7 @@
     "derivation-path": "Derivation path",
     "storage": "Storage",
     "keycard-free-pairing-slots": "Keycard has {{n}} free pairing slots",
-    "public-chat-description": "Join or create public house for your interests! Anyone can start a new one.",
+    "public-chat-description": "Find your interest topics! 🎭 \nAnyone can start a new one.",
     "delete-account": "Delete account",
     "watch-only": "Watch-only",
     "cant-report-bug": "Can't report a bug",

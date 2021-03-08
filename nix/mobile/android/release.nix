@@ -131,7 +131,7 @@ in stdenv.mkDerivation rec {
   keystorePhase =
     assert assertMsg (keystorePath != null) "keystorePath has to be set!";
   ''
-    export KEYSTORE_PATH="$PWD/status-im.keystore"
+    export KEYSTORE_PATH="$PWD/movement-keystore.keystore"
     cp -a --no-preserve=ownership "${keystorePath}" "$KEYSTORE_PATH"
   '';
   buildPhase = let
