@@ -73,7 +73,7 @@
 (def tabs
   (reagent/adapt-react-class
    (fn [props]
-     (let [{:keys [navigate index route state popToTop]} (bean props)
+     (let [{:keys [navigate index route popToTop]} (bean props)
            {:keys [keyboard-shown]
             :or   {keyboard-shown false}} (when platform/android? (rn/use-keyboard))
            {:keys [bottom]} (safe-area/use-safe-area)
@@ -99,10 +99,7 @@
               :label               title
               :on-press            #(if (= (str index) (str route-index))
                                       (popToTop)
-                                      (let [view-id (navigation/get-index-route-name route-index (bean state))]
-                                        (re-frame/dispatch-sync [:screens/tab-will-change view-id])
-                                        (reagent/flush)
-                                        (navigate (name nav-stack))))
+                                      (navigate (name nav-stack)))
               :accessibility-label accessibility-label
               :count-subscription  count-subscription
               :active?             (= (str index) (str route-index))
