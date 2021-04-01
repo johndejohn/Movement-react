@@ -1,6 +1,5 @@
 (ns status-im.notifications.local
-  (:require [taoensso.timbre :as log]
-            [status-im.utils.fx :as fx]
+  (:require [status-im.utils.fx :as fx]
             [status-im.ethereum.decode :as decode]
             ["@react-native-community/push-notification-ios" :default pn-ios]
             [status-im.notifications.android :as pn-android]
@@ -14,10 +13,13 @@
             [re-frame.core :as re-frame]
             [status-im.ui.components.react :as react]
             [cljs-bean.core :as bean]
-            [status-im.ui.screens.chat.components.reply :as reply]
             [clojure.string :as clojure.string]
+
             [status-im.chat.models :as chat.models]
             [status-im.constants :as constants]))
+
+            [status-im.chat.models :as chat.models]))
+
 
 (def default-erc20-token
   {:symbol   :ERC20
@@ -38,21 +40,8 @@
                                         {:notificationType "local-notification"}))})))
 
 (defn local-push-android
-  [{:keys [title message icon user-info channel-id type]
-    :as   notification
-    :or   {channel-id "status-im-notifications"}}]
-  (when notification
-    (pn-android/present-local-notification
-     (merge {:channelId channel-id
-             :title     title
-             :message   message
-             :showBadge false}
-            (when user-info
-              {:userInfo (bean/->js user-info)})
-            (when icon
-              {:largeIconUrl (:uri (react/resolve-asset-source icon))})
-            (when (= type "message")
-              notification)))))
+  [notification]
+  (pn-android/present-local-notification notification))
 
 (defn handle-notification-press [{{deep-link :deepLink} :userInfo
                                   interaction           :userInteraction}]
@@ -105,8 +94,10 @@
                       nil)]
     {:title     title
      :icon      (get-in token [:icon :source])
+     :deepLink  (:deepLink notification)
      :user-info notification
      :message   description}))
+
 
 
 (defn show-message-pn?
@@ -204,13 +195,21 @@
         :text             (reply/get-quoted-text-with-mentions (:parsedText message))})))
 
 
+(defn show-message-pn?
+  [{{:keys [app-state]} :db :as cofx}
+   notification]
+  (let [chat-id (get-in notification [:body :chat :id])]
+    (or (= app-state "background")
+        (not (chat.models/foreground-chat? cofx chat-id)))))
+
+
 (defn create-notification
   ([notification]
    (create-notification nil notification))
   ([cofx {:keys [bodyType] :as notification}]
    (assoc
     (case bodyType
-      "message"     (create-message-notification cofx notification)
+      "message"     (when (show-message-pn? cofx notification) notification)
       "transaction" (create-transfer-notification notification)
       nil)
     :body-type bodyType)))
@@ -232,16 +231,3 @@
   (if platform/ios?
     {::local-push-ios evt}
     (local-notification-android cofx evt)))
-
-(defn handle []
-  (fn [^js message]
-    (let [evt (types/json->clj (.-event message))]
-      (js/Promise.
-       (fn [on-success on-error]
-         (try
-           (when (= "local-notifications" (:type evt))
-             (re-frame/dispatch [::local-notification-android (:event evt)]))
-           (on-success)
-           (catch :default e
-             (log/warn "failed to handle background notification" e)
-             (on-error e))))))))
