@@ -16,7 +16,7 @@
             [clojure.string :as clojure.string]
 
             [status-im.chat.models :as chat.models]
-            [status-im.constants :as constants]))
+            [status-im.constants :as constants]
 
             [status-im.chat.models :as chat.models]))
 

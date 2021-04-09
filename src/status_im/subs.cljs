@@ -1038,14 +1038,14 @@
       :stickers      (and mainnet?
                           (not sending-image)
                           (not reply))
-      :image         (and (not reply)
-                          (not public?))
+      :image         (and (not reply))
+                          
       :extensions    (and one-to-one-chat?
                           (or config/commands-enabled? mainnet?)
                           (not reply))
       :audio         (and (not sending-image)
-                          (not reply)
-                          (not public?))
+                          (not reply))
+                          
       :sending-image sending-image})))
 
 (re-frame/reg-sub
