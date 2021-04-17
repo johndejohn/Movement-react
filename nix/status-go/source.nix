@@ -3,12 +3,12 @@
 let
   inherit (lib) strings traceValFn attrByPath importJSON;
 
-  srcOverride = attrByPath [ "status-im" "status-go" "src-override" ] null config;
+  srcOverride = attrByPath [ "movement" "status-go" "src-override" ] null config;
   # Warning message about using local sources
   localSrcWarn = (path: "Using local status-go sources from ${path}");
 
   localSrc = rec {
-    owner = "status-im";
+    owner = "movement";
     repo = "status-go";
     rev = "unknown";
     shortRev = rev;

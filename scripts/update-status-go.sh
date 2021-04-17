@@ -30,8 +30,8 @@ VERSION_FILE="${GIT_ROOT}/status-go-version.json"
 SCRIPT_FILE="$(basename "$0")"
 
 STATUS_GO_REPO="${STATUS_GO_REPO:=status-go}"
-STATUS_GO_OWNER="${STATUS_GO_OWNER:=status-im}"
-REPO_URL="https://github.com/${STATUS_GO_OWNER}/${STATUS_GO_REPO}"
+STATUS_GO_OWNER="${STATUS_GO_OWNER:=movement}"
+REPO_URL="http://github.com/${STATUS_GO_OWNER}/${STATUS_GO_REPO}"
 STATUS_GO_VERSION=$1
 
 HELP_MESSAGE=$(cat <<-END
