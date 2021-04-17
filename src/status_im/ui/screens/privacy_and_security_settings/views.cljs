@@ -14,7 +14,10 @@
   [quo/separator {:style {:margin-vertical  8}}])
 
 (views/defview privacy-and-security []
-  (views/letsubs [{:keys [mnemonic preview-privacy? webview-allow-permission-requests?]} [:multiaccount]
+  (views/letsubs [{:keys [mnemonic
+                          preview-privacy?
+                          messages-from-contacts-only
+                          webview-allow-permission-requests?]} [:multiaccount]
                   supported-biometric-auth [:supported-biometric-auth]
                   auth-method              [:auth-method]]
     [react/view {:flex 1 :background-color colors/white}
@@ -67,6 +70,15 @@
                       :chevron                 true
                       :on-press                #(re-frame/dispatch [:navigate-to :link-previews-settings])
                       :accessibility-label    :chat-link-previews}]
+      [quo/list-item {:size                    :small
+                      :title                   (i18n/label :t/accept-new-chats-from)
+                      :chevron                 true
+                      :accessory               :text
+                      :accessory-text           (i18n/label (if messages-from-contacts-only
+                                                              :t/contacts
+                                                              :t/anyone))
+                      :on-press                #(re-frame/dispatch [:navigate-to :messages-from-contacts-only])
+                      :accessibility-label    :accept-new-chats-from}]
       (when platform/android?
         [quo/list-item {:size                    :small
                         :title                   (i18n/label :t/webview-camera-permission-requests)

@@ -16,6 +16,7 @@
             [status-im.ui.screens.dapps-permissions.views :as dapps-permissions]
             [status-im.ui.screens.link-previews-settings.views :as link-previews-settings]
             [status-im.ui.screens.privacy-and-security-settings.views :as privacy-and-security]
+            [status-im.ui.screens.privacy-and-security-settings.messages-from-contacts-only :as messages-from-contacts-only]
             [status-im.ui.screens.sync-settings.views :as sync-settings]
             [status-im.ui.screens.advanced-settings.views :as advanced-settings]
             [status-im.ui.screens.help-center.views :as help-center]
@@ -33,6 +34,7 @@
             [status-im.ui.screens.fleet-settings.views :as fleet-settings]
             [status-im.ui.screens.profile.seed.views :as profile.seed]
             [status-im.ui.screens.keycard.pin.views :as keycard.pin]
+            [status-im.ui.screens.keycard.pairing.views :as keycard.pairing]
             [status-im.ui.screens.keycard.settings.views :as keycard.settings]
             [status-im.ui.components.tabbar.styles :as tabbar.styles]
             [status-im.ui.screens.routing.core :as navigation]
@@ -81,6 +83,8 @@
      :component link-previews-settings/link-previews-settings}
     {:name      :privacy-and-security
      :component privacy-and-security/privacy-and-security}
+    {:name      :messages-from-contacts-only
+     :component messages-from-contacts-only/messages-from-contacts-only}
     {:name      :appearance
      :component appearance/appearance}
     {:name      :appearance-profile-pic
@@ -134,4 +138,6 @@
     {:name      :keycard-pin
      :component keycard.settings/reset-pin}
     {:name      :enter-pin-settings
-     :component keycard.pin/enter-pin}]])
+     :component keycard.pin/enter-pin}
+    {:name      :change-pairing-code
+     :component keycard.pairing/change-pairing-code}]])

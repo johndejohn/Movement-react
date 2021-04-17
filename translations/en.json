@@ -9,6 +9,9 @@
     "accept-and-share-address": "Accept and share address",
     "account-added": "Account added",
     "account-color": "Account color",
+    "anyone": "Anyone",
+    "messages-from-contacts-only-subtitle": "Only people you added as contacts can start a new chat with you or invite you to a group",
+    "accept-new-chats-from": "Accept new chats from",
     "account-name": "Account name",
     "account-settings": "Account settings",
     "accounts": "Accounts",
@@ -121,6 +124,9 @@
     "change-password": "Change Password",
     "change-pin": "Change 6-digit passcode",
     "change-puk": "Change 12-digit PUK",
+    "change-pairing": "Change pairing code",
+    "change-pairing-title": "Create a new pairing code",
+    "change-pairing-description": "Changing the pairing code does not affect the current pairings. However, any new pairing will require the new code.",
     "changed-amount-warning": "Amount was changed from {{old}} to {{new}}",
     "changed-asset-warning": "Asset was changed from {{old}} to {{new}}",
     "chaos-mode": "Chaos mode",
@@ -532,10 +538,8 @@
     "ethereum-node-started-incorrectly-title": "Inter node started incorrectly",
     "etherscan-lookup": "Look up on Interscan",
     "export-account": "Export account",
-
     "export-key": "Export private key",
     "community-private-key": "Community private key",
-
     "failed": "Failed",
     "faq": "Frequently asked questions",
     "fetch-messages": "↓ Fetch messages",
@@ -545,12 +549,8 @@
     "finishing-card-setup": "Finishing card setup",
     "fleet": "Fleet",
     "fleet-settings": "Fleet settings",
-
-    "follow-your-interests": "Top trending topics 🏆",
-
     "follow-your-interests": "Top trending topics 🏆",
     "follow": "Follow",
-
     "free": "↓ Free",
     "from": "From",
     "gas-limit": "Gas limit",
@@ -951,6 +951,9 @@
     "paired-devices": "Paired devices",
     "pairing": "Pairing",
     "pairing-card": "Pairing card",
+    "pairing-code-placeholder":"Pairing code...",
+    "pairing-code_error1": "Pairing codes don't match.",
+    "confirm-pairing-code-placeholder": "Confirm your pairing code...",
     "pairing-go-to-installation": "Go to pairing settings",
     "pairing-maximum-number-reached-content": "Please disable one of your devices before enabling a new one.",
     "pairing-maximum-number-reached-title": "Max number of devices reached",
@@ -974,6 +977,7 @@
     "photos-access-error": "To grant the required photos permission, please go to your system settings and make sure that Movement > Photos is selected.",
     "pin-changed": "6-digit passcode has been changed",
     "puk-changed": "12-digit PUK has been changed",
+    "pairing-changed": "Pairing code has been changed",
     "pin-code": "6-digit passcode",
     "pin-mismatch": "Wrong passcode",
     "pin-retries-left": "{{number}} attemps left",
@@ -1093,7 +1097,6 @@
     "sharing-share": "Share",
     "show-less": "Show less",
     "show-more": "Show more",
-    "show-notifications": "Show notifications",
     "show-qr": "Show QR code",
     "show-transaction-data": "Show transaction data",
     "sign-and-send": "Sign and send",
@@ -1502,6 +1505,10 @@
 
     "rpc-usage-copy": "Copy",
     "community-message-preview": "Invitation to join {{community-name}}",
-    "non-contacts": "Non contacts"
+    "non-contacts": "Non contacts",
+    "non-contacts": "Non contacts",
+    "activity": "Activity",
+    "reject-and-delete": "Reject and delete",
+    "accept-and-add": "Accept and add"
 
 }
