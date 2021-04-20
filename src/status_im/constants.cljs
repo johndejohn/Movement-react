@@ -79,8 +79,10 @@
 
 (def ^:const web3-send-transaction "eth_sendTransaction")
 (def ^:const web3-personal-sign "personal_sign")
+(def ^:const web3-eth-sign "eth_sign")
 (def ^:const web3-sign-typed-data "eth_signTypedData")
 (def ^:const web3-sign-typed-data-v3 "eth_signTypedData_v3")
+(def ^:const web3-sign-typed-data-v4 "eth_signTypedData_v4")
 
 (def ^:const web3-keycard-sign-typed-data "keycard_signTypedData")
 
@@ -120,6 +122,7 @@
 (def regx-italic #"~[^~]+~")
 (def regx-backquote #"`[^`]+`")
 (def regx-universal-link #"((^https?://join.status.im/)|(^status-im://))[\x00-\x7F]+$")
+(def regx-community-universal-link #"((^https?://join.status.im/)|(^status-im://))c/([\x00-\x7F]+)$")
 (def regx-deep-link #"((^ethereum:.*)|(^status-im://[\x00-\x7F]+$))")
 
 (def ^:const dapp-permission-contact-code "contact-code")

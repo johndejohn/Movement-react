@@ -389,7 +389,7 @@ class TestMessagesOneToOneChatMultiple(MultipleDeviceTestCase):
         chat_1 = home_1.add_contact(public_key_2)
         url_message = 'http://status.im'
         chat_1.send_message(url_message)
-        chat_1.get_back_to_home_view()
+        chat_1.home_button.double_click()
         chat_2 = home_2.get_chat(default_username_1).click()
         chat_2.element_starts_with_text(url_message, 'button').click()
         web_view = chat_2.open_in_status_button.click()
@@ -397,7 +397,7 @@ class TestMessagesOneToOneChatMultiple(MultipleDeviceTestCase):
             web_view.element_by_text('Private, Secure Communication').find_element()
         except TimeoutException:
             self.errors.append('Device 2: URL was not opened from 1-1 chat')
-        web_view.back_to_home_button.click()
+        home_2.dapp_tab_button.double_click()
         chat_2.home_button.click()
 
         home_1.just_fyi("Check that link can be opened from public chat")
@@ -460,14 +460,16 @@ class TestMessagesOneToOneChatMultiple(MultipleDeviceTestCase):
 
         device_2_chat = device_2_home.add_contact(device_1_public_key)
 
-        message = 'test message'
-        device_2_chat.chat_message_input.send_keys(message)
-        device_2_chat.send_message_button.click()
+        message, message_2= 'test message', 'test message2'
+        device_2_chat.send_message(message)
+        chat_element = device_1_home.get_chat(default_username_2)
+        device_1.dapp_tab_button.click()
+        device_2_chat.send_message(message_2)
+
 
         if device_1_home.home_button.counter.text != '1':
             self.errors.append('New messages counter is not shown on Home button')
-
-        chat_element = device_1_home.get_chat(default_username_2)
+        device_1.home_button.click()
         if chat_element.new_messages_counter.text != '1':
             self.errors.append('New messages counter is not shown on chat element')
 

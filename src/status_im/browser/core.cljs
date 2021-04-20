@@ -381,14 +381,15 @@
   {:browser/send-to-bridge message})
 
 (defn web3-sign-message? [method]
-  (#{constants/web3-sign-typed-data constants/web3-sign-typed-data-v3 constants/web3-personal-sign
-     constants/web3-keycard-sign-typed-data} method))
+  (#{constants/web3-sign-typed-data constants/web3-sign-typed-data-v3 constants/web3-sign-typed-data-v4
+     constants/web3-personal-sign
+     constants/web3-eth-sign constants/web3-keycard-sign-typed-data} method))
 
 (fx/defn web3-send-async
   [cofx {:keys [method params id] :as payload} message-id]
   (let [message?      (web3-sign-message? method)
         dapps-address (get-in cofx [:db :multiaccount :dapps-address])
-        typed? (not= constants/web3-personal-sign method)]
+        typed? (and (not= constants/web3-personal-sign method) (not= constants/web3-eth-sign method))]
     (if (or message? (= constants/web3-send-transaction method))
       (let [[address data] (cond (and (= method constants/web3-keycard-sign-typed-data)
                                       (not (vector? params)))
@@ -401,6 +402,7 @@
                               (if message?
                                 {:message {:address address
                                            :data data
+                                           :v4 (= constants/web3-sign-typed-data-v4 method)
                                            :typed? typed?
                                            :pinless? (= method constants/web3-keycard-sign-typed-data)
                                            :from dapps-address}}
