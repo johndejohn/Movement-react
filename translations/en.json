@@ -708,6 +708,9 @@
     "keycard-desc": "Own a Keycard? Store your keys on it; you’ll need it for transactions",
     "keycard-dont-ask-card": "Don't ask for card to sign in",
     "keycard-reset-passcode": "Reset passcode",
+    "keycard-factory-reset": "Return card to factory settings",
+    "keycard-factory-reset-title": "Are you sure you want to perform a factory reset?",
+    "keycard-factory-reset-text": "Performing this will delete any mnemonic phrase stored on the card. Make sure you have a backup of the mnemonic phrase you've been using with this Keycard.",
     "keycard-enter-new-passcode": "Enter new passcode {{step}}/2",
     "keycard-has-multiaccount-on-it": "This card is full. Each card can hold one main keypair",
     "keycard-onboarding-finishing-header": "Finishing up",
@@ -1513,6 +1516,7 @@
     "activity": "Activity",
     "reject-and-delete": "Reject and delete",
     "accept-and-add": "Accept and add",
-    "my-profile": "My profile"
+    "my-profile": "My profile",
+    "bip39-password-placeholder": "BIP39 password"
 
 }
