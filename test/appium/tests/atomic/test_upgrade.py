@@ -1,8 +1,10 @@
-from tests import marks, pytest_config_global
+from tests import marks, pytest_config_global, test_dapp_name
 from tests.base_test_case import SingleDeviceTestCase, MultipleDeviceTestCase
-from tests.users import upgrade_users
+from tests.users import upgrade_users, transaction_recipients
 from views.sign_in_view import SignInView
 import views.upgrade_dbs.chats.data as chat_data
+import views.upgrade_dbs.dapps.data as dapp_data
+import views.upgrade_dbs.pairing.data as sync_data
 
 @marks.upgrade
 class TestUpgradeApplication(SingleDeviceTestCase):
@@ -117,6 +119,76 @@ class TestUpgradeApplication(SingleDeviceTestCase):
 
         self.errors.verify_no_errors()
 
+    @marks.testrail_id(695804)
+    def test_dapps_browser_several_accounts_upgrade(self):
+        sign_in = SignInView(self.driver)
+        favourites = dapp_data.dapps['favourites']
+        home = sign_in.import_db(user=transaction_recipients['K'], import_db_folder_name='dapps')
+        home.upgrade_app()
+        sign_in.sign_in()
+        dapps = home.dapp_tab_button.click()
+
+        sign_in.just_fyi('Check Dapps favourites')
+        for key in favourites:
+            if not dapps.element_by_text(key).is_element_displayed():
+                self.errors.append('Name of bookmark "%s" is not shown in favourites!' % key)
+            if not dapps.element_by_text(favourites[key]).is_element_displayed():
+                self.errors.append('"%s" of bookmark is not shown in favourites!' % favourites[key])
+
+        sign_in.just_fyi('Check dapps are still in history')
+        browsing = sign_in.get_base_web_view()
+        browsing.open_tabs_button.click()
+        visited = dapp_data.dapps['history']['visited']
+        for key in visited:
+            if not dapps.element_by_text(key).is_element_displayed():
+                self.errors.append('Name of tab "%s" is not shown in browser history!' % key)
+            if not dapps.element_by_text(visited[key]).is_element_displayed():
+                self.errors.append('"%s" of tab is not shown in browser history!' % visited[key])
+        if dapps.element_by_text(dapp_data.dapps['history']['deleted']).is_element_displayed():
+            self.errors.append('Closed tab is shown in browser!')
+
+        sign_in.just_fyi('Check browser history is kept')
+        github = dapp_data.dapps['browsed_page']
+        dapps.element_by_text(github['name']).click()
+        browsing.wait_for_d_aap_to_load()
+        browsing.browser_previous_page_button.click()
+        browsing.wait_for_d_aap_to_load()
+        if not dapps.element_by_text(github['previous_text']).is_element_displayed():
+            self.errors.append('Previous page is not opened!')
+
+        sign_in.just_fyi('Check permissions for dapp')
+        profile = dapps.profile_button.click()
+        profile.privacy_and_security_button.click()
+        profile.dapp_permissions_button.click()
+        if profile.element_by_text_part( dapp_data.dapps['permissions']['deleted']).is_element_displayed():
+            self.errors.append('Deleted permissions reappear after upgrade!')
+        profile.element_by_text(test_dapp_name).click()
+        permissions = dapp_data.dapps['permissions']['added'][test_dapp_name]
+        for text in permissions:
+            if not profile.element_by_text(text).is_element_displayed():
+                self.errors.append('%s is deleted after upgrade from %s permissions' % (text, test_dapp_name))
+
+        sign_in.just_fyi('Check that balance is preserved')
+        accounts = dapp_data.wallets
+        wallet = profile.wallet_button.click()
+        for asset in ('ETH', 'ADI', 'STT'):
+            wallet.wait_balance_is_changed(asset=asset)
+
+        sign_in.just_fyi('Check accounts inside multiaccount')
+        if not wallet.element_by_text(accounts['generated']['address']).is_element_displayed():
+            self.errors.append('Address of generated account is not shown')
+        generated = wallet.get_account_by_name(accounts['generated']['name'])
+        if not generated.color_matches('multi_account_color.png'):
+            self.errors.append('Colour of generated account does not match expected after upgrade')
+
+        wallet.get_account_by_name(accounts['default']['name']).swipe_left_on_element()
+        if not wallet.element_by_text(dapp_data.wallets['watch-only']['name']).is_element_displayed():
+            self.errors.append('Watch-only account is not shown')
+        if not wallet.element_by_text(accounts['watch-only']['address']).is_element_displayed():
+            self.errors.append('Address of watch-only account is not shown')
+
+        self.errors.verify_no_errors()
+
 @marks.upgrade
 class TestUpgradeMultipleApplication(MultipleDeviceTestCase):
 
@@ -172,6 +244,89 @@ class TestUpgradeMultipleApplication(MultipleDeviceTestCase):
         device_2_chat.send_message(response)
         if not device_1_chat.chat_element_by_text(response).is_element_displayed():
             self.errors.append("Message sent from previous release is not shown on upgraded app!")
+
+        self.errors.verify_no_errors()
+
+    @marks.testrail_id(695805)
+    def test_devices_sync_contact_management_upgrade(self):
+        self.create_drivers(2)
+        user = transaction_recipients['K']
+        device_1, device_2 = SignInView(self.drivers[0]), SignInView(self.drivers[1])
+
+        device_1.just_fyi("Import db, upgrade")
+        home_1 = device_1.import_db(user=user, import_db_folder_name='pairing/main')
+        home_2 = device_2.import_db(user=user, import_db_folder_name='pairing/secondary')
+        for device in (device_1, device_2):
+            device.upgrade_app()
+            device.sign_in()
+
+        device_1.just_fyi("Contacts: check blocked and removed contacts, contacts with ENS")
+        if home_1.element_by_text(sync_data.chats['deleted']).is_element_displayed():
+            self.error.append("Removed public chat reappears after upgrade!")
+        profile_1 = home_1.profile_button.click()
+        profile_1.contacts_button.click()
+        synced = sync_data.contacts['synced']
+        for username in list(synced.values()):
+            if not profile_1.element_by_text(username).is_element_displayed():
+                self.error.append("'%s' is not shown in contacts list after upgrade!" % username)
+        if profile_1.element_by_text_part(sync_data.contacts['removed']).is_element_displayed():
+            self.error.append("Removed user is shown in contacts list after upgrade!")
+        profile_1.blocked_users_button.click()
+        if not profile_1.element_by_text_part(sync_data.contacts['blocked']).is_element_displayed():
+            self.error.append("Blocked user is not shown in contacts list after upgrade!")
+
+        device_2.just_fyi("Pairing: check synced public chats on secondary device")
+        for chat in sync_data.chats['synced_public']:
+            if not home_2.element_by_text(chat).is_element_displayed():
+                self.error.append("Synced public chat '%s' is not shown on secondary device after upgrade!" % chat)
+
+        device_1.just_fyi("Pairing: check that can send messages to chats and they will appear on secondary device")
+        main_1_1, secondary_1_1, group = synced['ens'], synced['username_ens'], sync_data.chats['group']
+        message = 'Device pairing check'
+        device_1.home_button.click()
+        chat_1 = home_1.get_chat(main_1_1).click()
+        chat_1.send_message(message)
+        home_2.get_chat(secondary_1_1).wait_for_visibility_of_element()
+        chat_2 = home_2.get_chat(secondary_1_1).click()
+        if not chat_2.chat_element_by_text(message).is_element_displayed():
+            self.error.append("Message in 1-1 chat does not appear on device 2 after sending from main device after upgrade")
+        [chat.home_button.click() for chat in (chat_1, chat_2)]
+        chat_1 = home_1.get_chat(group).click()
+        chat_1.send_message(message)
+        home_2.get_chat(group).wait_for_visibility_of_element()
+        chat_2 = home_2.get_chat(group).click()
+        if not chat_2.chat_element_by_text(message).is_element_displayed():
+            self.error.append("Message in group chat does not appear on device 2 after sending from main device after upgrade")
+        [chat.home_button.click() for chat in (chat_1, chat_2)]
+
+        device_1.just_fyi("Pairing: add public chat and check it will appear on secondary device")
+        public = sync_data.chats['added_public']
+        chat_1 = home_1.join_public_chat(public[1:])
+        chat_1.send_message(message)
+        home_2.get_chat(public).wait_for_visibility_of_element()
+        chat_2 = home_2.get_chat(public).click()
+        if not chat_2.chat_element_by_text(message).is_element_displayed():
+            self.error.append(
+                "Message in public chat does not appear on device 2 after sending from main device after upgrade")
+        [chat.home_button.click() for chat in (chat_1, chat_2)]
+
+        device_1.just_fyi("Pairing: add contact and check that it will appear on secondary device")
+        added = sync_data.contacts['added']
+        chat_1 = home_1.add_contact(added['public_key'], nickname=added['name'])
+        chat_1.send_message(message)
+        home_2.get_chat(added['name']).wait_for_visibility_of_element()
+        chat_2 = home_2.get_chat(added['name']).click()
+        if not chat_2.chat_element_by_text(message).is_element_displayed():
+            self.error.append(
+                "Message in new 1-1 chat does not appear on device 2 after sending from main device after upgrade")
+
+        device_2.just_fyi("Pairing: check that contacts/nicknames are synced")
+        synced_secondary = {synced['nickname'], synced['username_nickname'], synced['username_ens'], added['name'], added['username']}
+        profile_2 = chat_2.profile_button.click()
+        profile_2.contacts_button.click()
+        for username in synced_secondary:
+            if not profile_2.element_by_text(username).is_element_displayed():
+                self.error.append("'%s' is not shown in contacts list on synced device after upgrade!" % username)
 
         self.errors.verify_no_errors()
 
