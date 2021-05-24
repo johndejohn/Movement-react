@@ -44,6 +44,7 @@
 (def qr-test-menu-enabled? (enabled? (get-config :QR_READ_TEST_MENU "0")))
 (def referrals-invite-enabled? (enabled? (get-config :ENABLE_REFERRAL_INVITE "1")))
 (def quo-preview-enabled? (enabled? (get-config :ENABLE_QUO_PREVIEW "0")))
+
 (def google-free (enabled? (get-config :GOOGLE_FREE "1")))
 (def communities-enabled? (enabled? (get-config :COMMUNITIES_ENABLED "1")))
 (def communities-management-enabled? (and (enabled? (get-config :COMMUNITIES_MANAGEMENT_ENABLED "1"))
