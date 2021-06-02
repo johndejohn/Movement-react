@@ -170,6 +170,7 @@
     "give-a-short-description": "Give a short description",
     "communities-alpha": "Communities (alpha)",
     "communities-verified": "✓ Verified Status Community",
+    "communities-enabled": "Communities enabled",
     "request-access": "Request access",
     "membership-request-pending": "Membership request pending",
     "create-community": "Create a community",
@@ -194,6 +195,7 @@
     "community-image-delete": "",
     "community-image-remove": "Remove",
     "community-color": "Community colour",
+    "community-link": "Community link",
     "community-color-placeholder": "Pick a colour",
     "membership-button": "Membership requirement",
     "membership-none": "None",
@@ -1523,11 +1525,17 @@
     "community": "Community",
     "verified-community": "✓ Verified community",
     "community-info-not-found": "Community information not found",
+    "community-info": "Community info",
     "not-found": "Not found",
     "activity": "Activity",
     "reject-and-delete": "Reject and delete",
     "accept-and-add": "Accept and add",
+    "one-day": "One day",
+    "three-days": "Three days",
+    "one-week": "One week",
+    "one-month": "One month",
     "my-profile": "My profile",
+    "default-sync-period": "Sync history for",
     "bip39-password-placeholder": "BIP39 password"
 
 }

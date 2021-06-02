@@ -781,6 +781,20 @@
    synced-from))
 
 (re-frame/reg-sub
+ :chats/chat-type
+ (fn [[_ chat-id] _]
+   (re-frame/subscribe [:chat-by-id chat-id]))
+ (fn [{:keys [chat-type]}]
+   chat-type))
+
+(re-frame/reg-sub
+ :chats/joined
+ (fn [[_ chat-id] _]
+   (re-frame/subscribe [:chat-by-id chat-id]))
+ (fn [{:keys [joined]}]
+   joined))
+
+(re-frame/reg-sub
  :chats/synced-to-and-from
  (fn [[_ chat-id] _]
    (re-frame/subscribe [:chat-by-id chat-id]))
@@ -949,8 +963,10 @@
    [(re-frame/subscribe [:chats/message-list chat-id])
     (re-frame/subscribe [:chats/chat-messages chat-id])
     (re-frame/subscribe [:chats/loading-messages? chat-id])
-    (re-frame/subscribe [:chats/synced-from chat-id])])
- (fn [[message-list messages loading-messages? synced-from] [_ chat-id]]
+    (re-frame/subscribe [:chats/synced-from chat-id])
+    (re-frame/subscribe [:chats/chat-type chat-id])
+    (re-frame/subscribe [:chats/joined chat-id])])
+ (fn [[message-list messages loading-messages? synced-from chat-type joined] [_ chat-id]]
    ;;TODO (perf)
    (let [message-list-seq (models.message-list/->seq message-list)]
      ; Don't show gaps if that's the case as we are still loading messages
@@ -959,7 +975,7 @@
        (-> message-list-seq
            (chat.db/add-datemarks)
            (hydrate-messages messages)
-           (chat.db/collapse-gaps chat-id synced-from))))))
+           (chat.db/collapse-gaps chat-id synced-from (datetime/timestamp) chat-type joined loading-messages?))))))
 
 ;;we want to keep data unchanged so react doesn't change component when we leave screen
 (def memo-chat-messages-stream (atom nil))
@@ -1207,7 +1223,7 @@
                                    {:alias      name
                                     :name       (or preferred-name name)
                                     :public-key public-key})))
-            [blocked public-key]))))
+            (conj blocked public-key)))))
 
 (re-frame/reg-sub
  :chat/mention-suggestions
