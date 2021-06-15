@@ -3,7 +3,6 @@ from views.base_element import Text, SilentButton
 from views.base_element import Button, EditBox
 from views.base_view import BaseView
 
-
 class AmountEditBox(EditBox, Button):
     def __init__(self, driver):
         super(AmountEditBox, self).__init__(driver, accessibility_id="amount-input")
@@ -134,8 +133,10 @@ class SendTransactionView(BaseView):
         self.enter_recipient_address_input.click()
         self.done_button.click_until_absense_of_element(self.done_button)
 
-    def sign_transaction(self, sender_password: str = common_password, keycard=False, default_gas_price=True):
+    def sign_transaction(self, sender_password: str = common_password, keycard=False, default_gas_price=False):
         self.driver.info("**Signing transaction (keycard:%s, default_gas_price:%s)**" % (str(keycard), str(default_gas_price)))
+        if self.sign_in_phrase.is_element_displayed():
+            self.set_up_wallet_when_sending_tx()
         if not default_gas_price:
             self.network_fee_button.click()
             default_gas_price = self.gas_price_input.text
