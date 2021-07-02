@@ -338,14 +338,14 @@ class TestProfileSingleDevice(SingleDeviceTestCase):
         no_link_found_error_msg = 'Could not find privacy policy link at'
         no_link_open_error_msg = 'Could not open our privacy policy from'
 
-        signin.just_fyi("Checking provacy policy from sign in and from profile")
+        signin.just_fyi("Checking privacy policy from sign in and from profile")
         if not signin.privacy_policy_link.is_element_displayed():
             self.driver.fail('%s Sign in view!' % no_link_found_error_msg)
         web_page = signin.privacy_policy_link.click()
         web_page.open_in_webview()
         if not web_page.policy_summary.is_element_displayed():
             self.errors.append('%s Sign in view!' % no_link_open_error_msg)
-        web_page.click_system_back_button()
+        web_page.close_privacy_policy_button.click()
         home = signin.create_user()
         profile = home.profile_button.click()
         profile.about_button.click()
@@ -1195,7 +1195,7 @@ class TestProfileMultipleDevice(MultipleDeviceTestCase):
         if not device_2_home.mobile_connection_on_icon.is_element_displayed():
             self.errors.append('No mobile connection ON icon is shown')
         device_2_home.get_chat('#%s'% public_chat_name).click()
-        if not device_2_public.chat_element_by_text(public_chat_message).is_element_displayed(30):
+        if not device_2_public.chat_element_by_text(public_chat_message).is_element_displayed(90):
             self.errors.append("Chat history was not fetched with mobile data fetching ON")
 
         device_2_home.just_fyi('check redirect to sync settings by tappin "Sync" in connection status bottom sheet')

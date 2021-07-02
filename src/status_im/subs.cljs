@@ -196,6 +196,8 @@
 (reg-root-key-sub ::message-lists :message-lists)
 (reg-root-key-sub ::pagination-info :pagination-info)
 
+(reg-root-key-sub :tos-accept-next-root :tos-accept-next-root)
+
 ;; keycard
 (reg-root-key-sub :keycard/banner-hidden :keycard/banner-hidden)
 
@@ -1075,6 +1077,12 @@
    (:responding-to-message metadata)))
 
 (re-frame/reg-sub
+ :chats/edit-message
+ :<- [:chats/current-chat-inputs]
+ (fn [{:keys [metadata]}]
+   (:editing-message metadata)))
+
+(re-frame/reg-sub
  :chats/sending-image
  :<- [:chats/current-chat-inputs]
  (fn [{:keys [metadata]}]
@@ -1095,20 +1103,26 @@
  :<- [:current-chat/one-to-one-chat?]
  :<- [:current-chat/metadata]
  :<- [:chats/reply-message]
- (fn [[disconnected? {:keys [processing]} sending-image mainnet? one-to-one-chat? {:keys [public?]} reply]]
+ :<- [:chats/edit-message]
+ (fn [[disconnected? {:keys [processing]} sending-image mainnet? one-to-one-chat? {:keys [public?]} reply edit]]
    (let [sending-image (seq sending-image)]
      {:send          (and (not (or processing disconnected?)))
       :stickers      (and mainnet?
                           (not sending-image)
                           (not reply))
       :image         (and (not reply))
-                          
+      :image         (and (not reply)
+                          (not edit)
+                          (not public?))
       :extensions    (and one-to-one-chat?
                           (or config/commands-enabled? mainnet?)
+                          (not edit)
                           (not reply))
       :audio         (and (not sending-image)
                           (not reply))
-                          
+                          (not reply)
+                          (not edit)
+                          (not public?)
       :sending-image sending-image})))
 
 (re-frame/reg-sub
@@ -1669,6 +1683,26 @@
        (filter (partial filter-recipient-favs
                         (string/lower-case search-filter))
                favs)))))
+
+;;ACTIVITY CENTER NOTIFICATIONS ========================================================================================
+
+(defn- group-notifications-by-date
+  [notifications]
+  (->> notifications
+       (group-by #(datetime/timestamp->date-key (:timestamp %)))
+       (sort-by key >)
+       (map (fn [[date-key notifications]]
+              (let [first-notification (first notifications)]
+                {:title (clojure.string/capitalize (datetime/day-relative (:timestamp first-notification)))
+                 :key   date-key
+                 :data  (sort-by :timestamp > notifications)})))))
+
+(re-frame/reg-sub
+ :activity.center/notifications-grouped-by-date
+ :<- [:activity.center/notifications]
+ (fn [{:keys [notifications]}]
+   (group-notifications-by-date (map #(assoc % :timestamp (or (:timestamp %) (:timestamp (or (:message %) (:last-message %))))) notifications))))
+
 ;;WALLET TRANSACTIONS ==================================================================================================
 
 (re-frame/reg-sub

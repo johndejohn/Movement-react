@@ -85,7 +85,7 @@ class KeycardKeyStorageButton(Button):
 
 class PrivacyPolicyLink(Button):
     def __init__(self, driver):
-        super(PrivacyPolicyLink, self).__init__(driver, xpath="//*[contains(@text, 'privacy policy')]")
+        super(PrivacyPolicyLink, self).__init__(driver, xpath="//*[contains(@text, 'Privacy policy')]")
 
     def click(self):
         element = self.find_element()
@@ -126,6 +126,7 @@ class SignInView(BaseView):
         self.first_username_on_choose_chat_name = Text(self.driver,
                                                        xpath="//*[@content-desc='select-account-button-0']//android.widget.TextView[1]")
         self.get_keycard_banner = Button(self.driver, translation_id="get-a-keycard")
+        self.accept_tos_checkbox = Button(self.driver, xpath="//android.widget.CheckBox[@content-desc='checkbox']")
 
         #keycard recovery
         self.recover_with_keycard_button = Button(self.driver, accessibility_id="recover-with-keycard-button")
@@ -155,6 +156,7 @@ class SignInView(BaseView):
     def create_user(self, password=common_password, keycard=False, enable_notifications=False, second_user=False):
         self.driver.info("**Creating new multiaccount (password:%s, keycard:%s)**" % (password, str(keycard)))
         if not second_user:
+            self.accept_tos_checkbox.click()
             self.get_started_button.click()
         self.generate_key_button.click_until_presence_of_element(self.next_button)
         self.next_button.click_until_absense_of_element(self.element_by_translation_id("intro-wizard-title2"))
@@ -177,8 +179,10 @@ class SignInView(BaseView):
         self.driver.info("**New multiaccount is created successfully!**")
         return self.get_home_view()
 
-    def recover_access(self, passphrase: str, password: str = common_password, keycard=False, enable_notifications=False):
+    def recover_access(self, passphrase: str, password: str = common_password, keycard=False, enable_notifications=False, second_user=False):
         self.driver.info("**Recover access(password:%s, keycard:%s)**" % (password, str(keycard)))
+        if not second_user:
+            self.accept_tos_checkbox.click()
         self.get_started_button.click_until_presence_of_element(self.access_key_button)
         self.access_key_button.click()
         self.enter_seed_phrase_button.click()
@@ -206,8 +210,8 @@ class SignInView(BaseView):
 
     def sign_in(self, password=common_password, keycard=False, position=1):
         self.driver.info("**Sign in (password:%s, keycard:%s)**" % (password, str(keycard)))
-        self.multi_account_on_login_button.wait_for_visibility_of_element(30)
-        self.get_multiaccount_by_position(position).click()
+        if self.multi_account_on_login_button.is_element_displayed(30):
+            self.get_multiaccount_by_position(position).click()
 
         if keycard:
             from views.keycard_view import KeycardView
