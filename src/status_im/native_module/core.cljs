@@ -192,6 +192,12 @@
   (log/debug "[native-module] verify")
   (.verify ^js (status) address hashed-password callback))
 
+(defn verify-database-password
+  "NOTE: beware, the password has to be sha3 hashed"
+  [key-uid hashed-password callback]
+  (log/debug "[native-module] verify-database-password")
+  (.verifyDatabasePassword ^js (status) key-uid hashed-password callback))
+
 (defn login-with-keycard
   [{:keys [key-uid multiaccount-data password chat-key]}]
   (log/debug "[native-module] login-with-keycard")
@@ -321,6 +327,10 @@
   (log/debug "[native-module] sign-group-membership")
   (.signGroupMembership ^js (status) content callback))
 
+(defn get-node-config [callback]
+  (log/debug "[native-module] get-node-config")
+  (.getNodeConfig ^js (status) callback))
+
 (defn update-mailservers
   [enodes on-result]
   (log/debug "[native-module] update-mailservers")
@@ -329,11 +339,6 @@
 (defn toggle-webview-debug [on]
   (log/debug "[native-module] toggle-webview-debug" on)
   (.toggleWebviewDebug ^js (status) on))
-
-(defn get-nodes-from-contract
-  [rpc-endpoint contract-address on-result]
-  (log/debug "[native-module] get-nodes-from-contract")
-  (.getNodesFromContract ^js (status) rpc-endpoint contract-address on-result))
 
 (defn rooted-device? [callback]
   (log/debug "[native-module] rooted-device?")
@@ -415,3 +420,14 @@
   (init-keystore
    key-uid
    #(.reEncryptDbAndKeystore ^js (status) key-uid current-password# new-password# callback)))
+
+(defn convert-to-keycard-account
+  [{:keys [key-uid] :as multiaccount-data} settings current-password# new-password callback]
+  (log/debug "[native-module] convert-to-keycard-account")
+  (.convertToKeycardAccount ^js (status)
+                            key-uid
+                            (types/clj->json multiaccount-data)
+                            (types/clj->json settings)
+                            current-password#
+                            new-password
+                            callback))

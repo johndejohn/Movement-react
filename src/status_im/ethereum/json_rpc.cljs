@@ -23,6 +23,7 @@
    "eth_getTransactionByHash" {}
    "eth_getTransactionReceipt" {}
    "eth_getBlockByNumber" {}
+   "eth_maxPriorityFeePerGas" {}
    "eth_newBlockFilter" {:subscription? true}
    "eth_newFilter" {:subscription? true}
    "eth_getCode" {}
@@ -96,6 +97,8 @@
    "wakuext_getLinkPreviewData" {}
    "wakuext_requestCommunityInfoFromMailserver" {}
    "wakuext_deactivateChat" {}
+   "wakuext_sendPinMessage" {}
+   "wakuext_chatPinnedMessages" {}
    ;;TODO not used anywhere?
    "wakuext_deleteChat" {}
    "wakuext_saveContact" {}
@@ -145,6 +148,11 @@
    "wakuext_communities" {}
    "wakuext_importCommunity" {}
    "wakuext_exportCommunity" {}
+   "wakuext_createCommunityCategory" {}
+   "wakuext_reorderCommunityCategories" {}
+   "wakuext_reorderCommunityChat" {}
+   "wakuext_editCommunityCategory" {}
+   "wakuext_deleteCommunityCategory" {}
    "wakuext_ensVerified" {}
    "wakuext_dismissActivityCenterNotifications" {}
    "wakuext_acceptActivityCenterNotifications" {}

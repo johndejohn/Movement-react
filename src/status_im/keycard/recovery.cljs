@@ -5,6 +5,7 @@
             [status-im.multiaccounts.model :as multiaccounts.model]
             [status-im.utils.fx :as fx]
             [re-frame.core :as re-frame]
+            [clojure.string :as string]
             [status-im.i18n.i18n :as i18n]
             [taoensso.timbre :as log]
             [status-im.keycard.common :as common]
@@ -13,6 +14,10 @@
             [status-im.ethereum.eip55 :as eip55]
             [status-im.ethereum.core :as ethereum]
             [status-im.bottom-sheet.core :as bottom-sheet]
+            [status-im.native-module.core :as status]
+            [status-im.utils.types :as types]
+            [status-im.utils.security :as security]
+            [status-im.utils.keychain.core :as keychain]
             [status-im.utils.platform :as platform]))
 
 (fx/defn pair* [_ password]
@@ -170,8 +175,7 @@
       (fx/merge cofx
                 {:db (-> db
                          (assoc-in [:keycard :setup-step] nil)
-                         (dissoc :intro-wizard))
-                 :init-root-fx :onboarding-notification}
+                         (dissoc :intro-wizard))}
                 (multiaccounts.create/on-multiaccount-created
                  {:recovered            (or recovered (get-in db [:intro-wizard :recovering?]))
                   :derived              {constants/path-wallet-root-keyword
@@ -214,8 +218,48 @@
                                   :content (i18n/label (if (= backup-type :recovery-card)
                                                          :t/keycard-can-use-with-new-passcode :t/keycard-backup-success-body))}}
             (if (multiaccounts.model/logged-in? cofx)
-              (navigation/navigate-to-cofx :keycard-settings nil)
+              (navigation/set-stack-root :profile-stack [:my-profile :keycard-settings])
               (return-to-keycard-login))))
+
+(re-frame/reg-fx
+ ::finish-migration
+ (fn [[account settings password encryption-pass login-params]]
+   (status/convert-to-keycard-account
+    account
+    settings
+    password
+    encryption-pass
+    #(let [{:keys [error]} (types/json->clj %)]
+       (if (string/blank? error)
+         (status/login-with-keycard login-params)
+         (throw (js/Error. "Please shake the phone to report this error and restart the app. Migration failed unexpectedly.")))))))
+
+(fx/defn migrate-account
+  [{:keys [db] :as cofx}]
+  (let [pairing (get-in db [:keycard :secrets :pairing])
+        paired-on (get-in db [:keycard :secrets :paired-on])
+        instance-uid (get-in db [:keycard :multiaccount :instance-uid])
+        account  (-> db
+                     :multiaccounts/login
+                     (assoc :keycard-pairing pairing)
+                     (assoc :save-password? false))
+        key-uid (-> account :key-uid)
+        settings {:keycard-instance-uid instance-uid
+                  :keycard-paired-on    paired-on
+                  :keycard-pairing      pairing}
+        password (ethereum/sha3 (security/safe-unmask-data (get-in db [:keycard :migration-password])))
+        encryption-pass (get-in db [:keycard :multiaccount :encryption-public-key])
+        login-params {:key-uid           key-uid
+                      :multiaccount-data (types/clj->json account)
+                      :password          encryption-pass
+                      :chat-key          (get-in db [:keycard :multiaccount :whisper-private-key])}]
+    {:db (-> db
+             (assoc-in [:multiaccounts/multiaccounts key-uid :keycard-pairing] pairing)
+             (assoc :multiaccounts/login account)
+             (assoc :auth-method keychain/auth-method-none)
+             (update :keycard dissoc :flow :migration-password)
+             (dissoc :recovered-account?))
+     ::finish-migration [account settings password encryption-pass login-params]}))
 
 (fx/defn on-generate-and-load-key-success
   {:events       [:keycard.callback/on-generate-and-load-key-success]
@@ -223,7 +267,8 @@
                   (re-frame/inject-cofx ::multiaccounts.create/get-signing-phrase)]}
   [{:keys [db random-guid-generator] :as cofx} data]
   (let [account-data (js->clj data :keywordize-keys true)
-        backup? (get-in db [:keycard :creating-backup?])]
+        backup? (get-in db [:keycard :creating-backup?])
+        migration? (get-in db [:keycard :converting-account?])]
     (fx/merge cofx
               {:db (-> db
                        (assoc-in [:keycard :multiaccount]
@@ -242,14 +287,14 @@
                        (assoc-in [:keycard :pin :status] nil)
                        (assoc-in [:keycard :application-info :key-uid]
                                  (ethereum/normalized-hex (:key-uid account-data)))
-                       (update :keycard dissoc :recovery-phrase)
-                       (update :keycard dissoc :creating-backup?)
-                       (update-in [:keycard :secrets] dissoc :pin :puk :password)
-                       (assoc :multiaccounts/new-installation-id (random-guid-generator))
-                       (update-in [:keycard :secrets] dissoc :mnemonic))}
+                       (update :keycard dissoc :recovery-phrase :creating-backup? :converting-account?)
+                       (update-in [:keycard :secrets] dissoc :pin :puk :password :mnemonic)
+                       (assoc :multiaccounts/new-installation-id (random-guid-generator)))}
               (common/remove-listener-to-hardware-back-button)
               (common/hide-connection-sheet)
-              (if backup? (on-backup-success backup?) (create-keycard-multiaccount)))))
+              (cond backup?    (on-backup-success backup?)
+                    migration? (migrate-account)
+                    :else      (create-keycard-multiaccount)))))
 
 (fx/defn on-generate-and-load-key-error
   {:events [:keycard.callback/on-generate-and-load-key-error]}

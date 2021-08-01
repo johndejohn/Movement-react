@@ -196,6 +196,60 @@ class TestMessagesOneToOneChatMultiple(MultipleDeviceTestCase):
         #     self.errors.append("Updated profile picture is not shown in one-to-one chat")
         self.errors.verify_no_errors()
 
+    @marks.testrail_id(695843)
+    @marks.high
+    def test_edit_message_in_one_to_one_and_public_chats(self):
+        self.create_drivers(2)
+        device_1, device_2 = SignInView(self.drivers[0]), SignInView(self.drivers[1])
+        device_1_home, device_2_home = device_1.create_user(), device_2.create_user()
+
+        device_2.just_fyi("Create public chat on Device1, send message and edit it then")
+        public_key_1, username_1 = device_1_home.get_public_key_and_username(return_username=True)
+        public_key_2, username_2 = device_2_home.get_public_key_and_username(return_username=True)
+        device_1_home.home_button.click()
+        device_2_home.home_button.click()
+        chat_name = device_1_home.get_random_chat_name()
+        device_1_home.join_public_chat(chat_name)
+        device_1_public_chat = device_1_home.get_chat_view()
+        message_before_edit = "Message BEFORE edit 1"
+        message_after_edit = "Message AFTER edit 2"
+        device_1_public_chat.send_message(message_before_edit)
+        device_1_public_chat.edit_message_in_chat(message_before_edit, message_after_edit)
+        if not device_1_public_chat.element_by_text_part("⌫ Edited").is_element_displayed():
+            self.errors.append('No mark in message bubble about this message was edited')
+
+        device_2.just_fyi("Device 1 sends text message and edits it in 1-1 chat. Device2 checks edited message is shown")
+        device_2_chat = device_2_home.add_contact(public_key_1)
+        message_before_edit_1_1 = "Message before edit 1-1"
+        message_after_edit_1_1 = "AFTER"
+        device_2_chat.send_message(message_before_edit_1_1)
+        device_1_home.home_button.click()
+
+        device_1_one_to_one_chat_element = device_1_home.get_chat(username_2)
+        device_2_chat.edit_message_in_chat(message_before_edit_1_1, message_after_edit_1_1)
+        device_2_home.home_button.click()
+        if not device_1_home.element_by_text_part(message_after_edit_1_1).is_element_present():
+            self.errors.append('UNedited message version displayed on preview')
+        device_1_one_to_one_chat_element.click()
+        if not device_1_home.element_by_text_part(message_after_edit_1_1).is_element_present():
+            self.errors.append('No edited message in 1-1 chat displayed')
+        if not device_1_home.element_by_text_part("⌫ Edited").is_element_present():
+            self.errors.append('No mark in message bubble about this message was edited on receiver side')
+
+        device_2.just_fyi("Verify Device1 can not edit received message from Device2")
+        device_1_home.element_by_text_part(message_after_edit_1_1).long_press_element()
+        if device_1_home.element_by_translation_id("edit").is_element_present():
+            self.errors.append('Option to edit someone else message available!')
+
+        device_2_home.home_button.click()
+        device_2_public_chat = device_2_home.join_public_chat(chat_name)
+        if not device_2_public_chat.element_by_text_part("⌫ Edited").is_element_displayed():
+            self.errors.append('No mark in message bubble about this message was edited')
+        if not device_2_public_chat.element_by_text_part(message_after_edit).is_element_displayed():
+            self.errors.append('Message is not edited.')
+
+        self.errors.verify_no_errors()
+
     @marks.testrail_id(5782)
     @marks.critical
     def test_install_pack_and_send_sticker(self):
@@ -273,7 +327,7 @@ class TestMessagesOneToOneChatMultiple(MultipleDeviceTestCase):
         device_1_status = 'Hey hey hey'
         timeline = device_1.status_button.click()
         timeline.set_new_status(device_1_status, image=True)
-        for element in timeline.element_by_text(device_1_status), timeline.image_chat_item:
+        for element in timeline.element_by_text(device_1_status), timeline.image_message_in_chat:
             if not element.is_element_displayed():
                 self.drivers[0].fail('Status is not set')
 
@@ -292,13 +346,13 @@ class TestMessagesOneToOneChatMultiple(MultipleDeviceTestCase):
         device_1_chat.chat_message_input.set_value(image_description)
         device_1_chat.send_message_button.click()
         device_1_chat.chat_message_input.click()
-        for message in device_1_chat.image_chat_item, device_1_chat.chat_element_by_text(image_description):
+        for message in device_1_chat.image_message_in_chat, device_1_chat.chat_element_by_text(image_description):
             if not message.is_element_displayed():
                 self.errors.append('Image or description is not shown in chat after sending for sender')
         device_1_chat.show_images_button.click()
         device_1_chat.image_from_gallery_button.click()
         device_1_chat.click_system_back_button()
-        device_1_chat.image_chat_item.long_press_element()
+        device_1_chat.image_message_in_chat.long_press_element()
         for element in device_1_chat.reply_message_button, device_1_chat.save_image_button:
             if not element.is_element_displayed():
                 self.errors.append('Save and reply are not available on long-press on own image messages')
@@ -307,21 +361,21 @@ class TestMessagesOneToOneChatMultiple(MultipleDeviceTestCase):
 
         device_2_home.just_fyi('check image, description and options for receiver')
         device_2_chat = device_2_home.get_chat(device_1_username).click()
-        for message in device_2_chat.image_chat_item, device_2_chat.chat_element_by_text(image_description):
+        for message in device_2_chat.image_message_in_chat, device_2_chat.chat_element_by_text(image_description):
             if not message.is_element_displayed():
                 self.errors.append('Image or description is not shown in chat after sending for receiver')
 
         device_2_home.just_fyi('View user profile and check status')
         device_2_chat.chat_options.click()
         timeline_device_1 = device_2_chat.view_profile_button.click()
-        for element in timeline_device_1.element_by_text(device_1_status), timeline_device_1.image_chat_item:
+        for element in timeline_device_1.element_by_text(device_1_status), timeline_device_1.image_message_in_chat:
             element.scroll_to_element()
             if not element.is_element_displayed():
                 self.drivers[0].fail('Status of another user not shown when open another user profile')
         device_2_chat.close_button.click()
 
         device_2_home.just_fyi('check options on long-press image for receiver')
-        device_2_chat.image_chat_item.long_press_element()
+        device_2_chat.image_message_in_chat.long_press_element()
         for element in (device_2_chat.reply_message_button, device_2_chat.save_image_button):
             if not element.is_element_displayed():
                 self.errors.append('Save and reply are not available on long-press on received image messages')
@@ -384,6 +438,112 @@ class TestMessagesOneToOneChatMultiple(MultipleDeviceTestCase):
         chat_2.play_audio_message(listen_time)
         if chat_2.audio_message_in_chat_timer.text not in ("00:05", "00:06", "00:07", "00:08"):
             self.errors.append("Listened 5 seconds but timer shows different listened time in audio message")
+
+        self.errors.verify_no_errors()
+
+    @marks.testrail_id(695847)
+    @marks.medium
+    def test_can_pin_messages_in_ono_to_one_and_group_chats(self):
+        self.create_drivers(2)
+        device_1, device_2 = SignInView(self.drivers[0]), SignInView(self.drivers[1])
+
+        home_1, home_2 = device_1.create_user(), device_2.create_user()
+        public_key_1, username_1 = home_1.get_public_key_and_username(return_username=True)
+        public_key_2, username_2 = home_2.get_public_key_and_username(return_username=True)
+        home_1.home_button.click()
+        chat_1 = home_1.add_contact(public_key_2)
+
+        home_1.just_fyi("Check that Device1 can pin own message in 1-1 chat")
+        message_1,message_2,message_3,message_4 = "Message1","Message2","Message3","Message4",
+        chat_1.send_message(message_1)
+        chat_1.send_message(message_2)
+        chat_1.pin_message(message_1)
+        if not chat_1.chat_element_by_text(message_1).pinned_by_label.is_element_present():
+            self.drivers[0].fail("Message is not pinned!")
+
+        home_1.just_fyi("Check that Device2 can pin Device1 message in 1-1 chat and two pinned "
+                        "messages are in Device1 profile")
+        home_2.home_button.click()
+        chat_2 = home_2.get_chat(username_1).click()
+        chat_2.pin_message(message_2)
+        chat_2.chat_options.click()
+        chat_2.view_profile_button.click()
+        if not chat_2.pinned_messages_button.count == "2":
+            self.drivers[0].fail("Pinned message count is not 2 as expected!")
+
+        home_1.just_fyi("Check pinned message are visible in Pinned panel for both users")
+        chat_1.chat_options.click()
+        chat_1.view_profile_button.click()
+        chat_1.pinned_messages_button.click()
+        if not (chat_1.chat_element_by_text(message_1).pinned_by_label.is_element_present() and
+        chat_1.chat_element_by_text(message_2).pinned_by_label.is_element_present() and
+        chat_1.chat_element_by_text(message_1).is_element_present() and
+        chat_1.chat_element_by_text(message_2).is_element_present()):
+            self.drivers[0].fail("Something missed on Pinned messaged on Device 1!")
+        chat_2.pinned_messages_button.click()
+        if not (chat_1.chat_element_by_text(message_1).pinned_by_label.is_element_present() and
+        chat_2.chat_element_by_text(message_2).pinned_by_label.is_element_present() and
+        chat_2.chat_element_by_text(message_1).is_element_present() and
+        chat_2.chat_element_by_text(message_2).is_element_present()):
+            self.drivers[0].fail("Something missed on Pinned messaged on Device 2!")
+        chat_1.close_button.click()
+
+        home_1.just_fyi("Check that Device1 can not pin more than 3 messages and 'Unpin' dialog appears"
+                        "messages are in Device1 profile")
+        chat_1.send_message(message_3)
+        chat_1.send_message(message_4)
+        chat_1.pin_message(message_3)
+        chat_1.pin_message(message_4)
+        if not chat_1.unpin_message_popup.is_element_present():
+            self.drivers[0].fail("No 'Unpin' dialog appears when pining 4th message")
+
+        home_1.just_fyi("Unpin one message so that another could be pinned")
+        chat_1.unpin_message_popup.message_text(message_1).click()
+        chat_1.unpin_message_popup.click_unpin_message_button()
+
+        if chat_1.unpin_message_popup.is_element_present():
+            self.drivers[0].fail("Unpin message pop up keep staying after Unpin button pressed")
+        if chat_1.chat_element_by_text(message_1).pinned_by_label.is_element_present():
+            self.drivers[0].fail("Message is not unpinned!")
+        if not chat_1.chat_element_by_text(message_4).pinned_by_label.is_element_present():
+            self.drivers[0].fail("Message is not pinned!")
+
+        home_1.just_fyi("Unpin another message and check it's unpinned for another user")
+        chat_2.close_button.click()
+        chat_2.pin_message(message_4, action="unpin")
+        chat_1.chat_element_by_text(message_4).pinned_by_label.wait_for_invisibility_of_element()
+        if chat_1.chat_element_by_text(message_4).pinned_by_label.is_element_present():
+            self.drivers[0].fail("Message_4 is not unpinned!")
+
+        home_1.just_fyi("Create group chat and pin message there. It's pinned for both members.")
+        chat_2.home_button.click()
+        chat_1.home_button.click()
+        group_chat_name = "GroupChat"
+        group_chat_1 = home_1.create_group_chat(user_names_to_add=[username_2], group_chat_name=group_chat_name)
+        home_2.get_chat(group_chat_name).click()
+        group_chat_2 = home_2.get_chat_view()
+        group_chat_2.join_chat_button.click()
+        group_chat_1.send_message(message_1)
+        group_chat_1.pin_message(message_1)
+        if not (group_chat_1.chat_element_by_text(message_1).pinned_by_label.is_element_present() and
+                group_chat_2.chat_element_by_text(message_1).pinned_by_label.is_element_present()):
+            self.errors.append("Message is not pinned in group chat!")
+
+        home_1.just_fyi("Check that non admin user can not unpin messages")
+        group_chat_2.chat_element_by_text(message_1).long_press_element()
+        if group_chat_2.element_by_translation_id("unpin").is_element_present():
+            self.errors.append("Unpin option is available for non-admin user")
+
+        home_1.just_fyi("Grant another user with admin rights and check he can unpin message now")
+        group_chat_1.chat_options.click()
+        group_info_view = group_chat_1.group_info.click()
+        options = group_info_view.get_username_options(username_2).click()
+        options.make_admin_button.click()
+        group_chat_2.click_system_back_button()
+        group_chat_2.pin_message(message_1, action="unpin")
+        if (group_chat_1.chat_element_by_text(message_1).pinned_by_label.is_element_present() and
+                group_chat_2.chat_element_by_text(message_1).pinned_by_label.is_element_present()):
+            self.errors.append("Message failed be unpinned by user who granted admin permissions!")
 
         self.errors.verify_no_errors()
 
@@ -504,6 +664,104 @@ class TestMessagesOneToOneChatMultiple(MultipleDeviceTestCase):
 
         if chat_element.new_messages_counter.text == '1':
             self.errors.append('New messages counter is shown on chat element for already seen message')
+        self.errors.verify_no_errors()
+
+    @marks.testrail_id(6321)
+    @marks.medium
+    def test_push_notifications_reactions_for_messages_in_stickers_audio_image(self):
+        self.create_drivers(2)
+        device_1, device_2 = SignInView(self.drivers[0]), SignInView(self.drivers[1])
+        device_1_home, device_2_home = device_1.create_user(enable_notifications=True), device_2.create_user()
+        device_1_public_key, default_username_1 = device_1_home.get_public_key_and_username(return_username=True)
+        device_2_public_key, default_username_2 = device_2_home.get_public_key_and_username(return_username=True)
+        device_1_home.home_button.click()
+        profile_2 = device_2_home.get_profile_view()
+        profile_2.switch_network()
+        device_2_chat = device_2_home.add_contact(device_1_public_key)
+
+        device_2_home.just_fyi('Install free sticker pack and use it in 1-1 chat')
+        device_2_chat.show_stickers_button.click()
+        device_2_chat.get_stickers.click()
+        device_2_chat.install_sticker_pack_by_name('Status Cat')
+        device_2_chat.back_button.click()
+        time.sleep(2)
+        device_2_chat.swipe_left()
+        device_1_chat = device_1_home.add_contact(device_2_public_key)
+
+        # methods with steps to use later in loop
+        def navigate_to_start_state_of_both_devices():
+            device_1_chat.put_app_to_background()
+            device_1.open_notification_bar()
+            device_2_chat.get_back_to_home_view(2)
+            device_2_home.get_chat_from_home_view(default_username_1).click()
+
+        def device_2_sends_sticker():
+            device_2_chat.just_fyi("Sending Sticker in chat")
+            device_2_chat.show_stickers_button.click()
+            device_2_chat.sticker_icon.click()
+
+        def device_2_sends_image():
+            device_2_chat.just_fyi("Sending Image in chat")
+            device_2_chat.show_images_button.click()
+            device_2_chat.allow_button.click()
+            device_2_chat.first_image_from_gallery.click()
+            device_2_chat.send_message_button.click()
+
+        def device_2_sends_audio():
+            device_2_chat.just_fyi("Sending Audio in chat")
+            device_2_chat.record_audio_message(message_length_in_seconds=3)
+            device_2_chat.send_message_button.click()
+
+        sending_list = {
+            "sticker": device_2_sends_sticker,
+            "image": device_2_sends_image,
+            "audio": device_2_sends_audio,
+        }
+
+
+        for key, value in sending_list.items():
+            navigate_to_start_state_of_both_devices()
+            sending_list[key]()
+            if not device_1.element_by_text_part(key.capitalize()).is_element_displayed(10):
+                self.errors.append("%s not appeared in Push Notification" % key.capitalize())
+                device_1.click_system_back_button()
+                device_1.get_app_from_background()
+            else:
+                device_1.element_by_text_part(key.capitalize()).click()
+            message = device_2_chat.chat_element_by_text(key)
+            device_1_chat.set_reaction(key)
+            if message.emojis_below_message(own=False) != 1:
+                self.errors.append("Counter of reaction is not set on %s for message receiver!" % key)
+            device_1_chat.set_reaction(key)
+            if message.emojis_below_message(own=False) == 1:
+                self.errors.append("Counter of reaction is not re-set on %s for message receiver!" % key)
+
+        device_2_chat.just_fyi("Sending Emoji/Tag/Links in chat")
+        ## TODO: add link and tag messages after #11168 is fixed
+        navigate_to_start_state_of_both_devices()
+
+        emoji_name = random.choice(list(emoji.EMOJI_UNICODE))
+        emoji_unicode = emoji.EMOJI_UNICODE[emoji_name]
+
+        device_2_chat.just_fyi("Sending Emoji in chat")
+        device_2_chat.chat_message_input.send_keys(emoji.emojize(emoji_name))
+        device_2_chat.send_message_button.click()
+
+        if not device_1.element_by_text_part(emoji_unicode).is_element_displayed(10):
+            self.errors.append("Emoji not appeared in Push Notification")
+            device_1.click_system_back_button()
+            device_1.get_app_from_background()
+        else:
+            device_1.element_by_text_part(emoji_unicode).click()
+
+        emoji_message = device_2_chat.chat_element_by_text(emoji_unicode)
+        device_1_chat.set_reaction(emoji_unicode, emoji_message=True)
+        if emoji_message.emojis_below_message(own=False) != 1:
+            self.errors.append("Counter of reaction is not set on Emoji for message receiver!")
+        device_1_chat.set_reaction(emoji_unicode, emoji_message=True)
+        if emoji_message.emojis_below_message(own=False) == 1:
+            self.errors.append("Counter of reaction is not re-set on Emoji for message receiver!")
+
         self.errors.verify_no_errors()
 
     @marks.testrail_id(5425)
@@ -786,7 +1044,7 @@ class TestMessagesOneToOneChatSingle(SingleDeviceTestCase):
     @marks.testrail_id(6322)
     @marks.medium
     def test_can_scan_different_links_with_universal_qr_scanner(self):
-        user = transaction_senders['C']
+        user = transaction_senders['L']
         home_view = SignInView(self.driver).recover_access(user['passphrase'])
         wallet_view = home_view.wallet_button.click()
         wallet_view.set_up_wallet()
@@ -880,7 +1138,7 @@ class TestMessagesOneToOneChatSingle(SingleDeviceTestCase):
                 wallet_view.home_button.click()
             if 'dapp' in key:
                 home_view.open_in_status_button.click()
-                if not chat_view.allow_button.is_element_displayed():
+                if not (chat_view.allow_button.is_element_displayed() or chat_view.element_by_text("Can't find web3 library").is_element_displayed()):
                     self.errors.append('No allow button is shown in case of navigating to Status dapp!')
                 chat_view.dapp_tab_button.click()
                 chat_view.home_button.click()

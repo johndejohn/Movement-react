@@ -36,7 +36,8 @@
             [status-im.utils.mobile-sync :as utils.mobile-sync]
             [status-im.async-storage.core :as async-storage]
             [status-im.notifications-center.core :as notifications-center]
-            [status-im.navigation :as navigation]))
+            [status-im.navigation :as navigation]
+            [status-im.signing.eip1559 :as eip1559]))
 
 (re-frame/reg-fx
  ::initialize-communities-enabled
@@ -252,6 +253,16 @@
   [cofx]
   {::initialize-communities-enabled nil})
 
+(fx/defn get-node-config-callback
+  {:events [::get-node-config-callback]}
+  [{:keys [db] :as cofx} node-config]
+  {:db (assoc-in db [:multiaccount :wakuv2-config]
+                 (get (types/json->clj node-config) :WakuV2Config))})
+
+(fx/defn get-node-config
+  [_]
+  (status/get-node-config #(re-frame/dispatch [::get-node-config-callback %])))
+
 (fx/defn get-settings-callback
   {:events [::get-settings-callback]}
   [{:keys [db] :as cofx} settings]
@@ -267,6 +278,10 @@
                                (assoc :networks/current-network current-network
                                       :networks/networks networks
                                       :multiaccount multiaccount))
+                       ::eip1559/check-eip1559-activation
+                       {:network-id  network-id
+                        :on-enabled  #(log/info "eip1550 is activated")
+                        :on-disabled #(log/info "eip1559 is not activated")}
                        ::initialize-wallet
                        (fn [accounts custom-tokens favourites]
                          (re-frame/dispatch [::initialize-wallet
@@ -279,6 +294,7 @@
               (initialize-communities-enabled)
               (check-network-version network-id)
               (chat.loading/initialize-chats)
+              (get-node-config)
               (communities/fetch)
               (contact/initialize-contacts)
               (stickers/init-stickers-packs)
@@ -387,6 +403,7 @@
         login-only?          (not (or creating?
                                       recovered-account?
                                       (keycard-setup? cofx)))
+        from-migration?      (get-in db [:keycard :from-key-storage-and-migration?])
         nodes                nil
         should-send-metrics? (get-in db [:multiaccount :anon-metrics/should-send?])]
     (log/debug "[multiaccount] multiaccount-login-success"
@@ -395,6 +412,7 @@
     (fx/merge cofx
               {:db (-> db
                        (dissoc :connectivity/ui-status-properties)
+                       (update :keycard dissoc :from-key-storage-and-migration?)
                        (update :keycard dissoc
                                :on-card-read
                                :card-read-in-progress?
@@ -418,6 +436,8 @@
               (when (and (not login-only?)
                          (not recovered-account?))
                 (wallet/set-initial-blocks-range))
+              (when from-migration?
+                (utils/show-popup (i18n/label :t/migration-successful) (i18n/label :t/migration-successful-text)))
               (if login-only?
                 (login-only-events key-uid password save-password?)
                 (create-only-events)))))

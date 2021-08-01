@@ -151,9 +151,29 @@ class PrivacyPolicyButton(Button):
         return BaseWebView(self.driver)
 
 
+class TermsOfUseButton(Button):
+    def __init__(self, driver):
+        super().__init__(driver, accessibility_id="terms-of-service")
+
+    def navigate(self):
+        from views.web_views.base_web_view import BaseWebView
+        return BaseWebView(self.driver)
+
+
 class ProfilePictureElement(Button):
     def __init__(self, driver):
         super().__init__(driver, accessibility_id="chat-icon")
+
+class KeycardButton(Button):
+
+    def navigate(self):
+        from views.keycard_view import KeycardView
+        return KeycardView(self.driver)
+
+    def click(self):
+        self.scroll_to_element().click()
+        return self.navigate()
+
 
 
 class ProfileView(BaseView):
@@ -193,6 +213,12 @@ class ProfileView(BaseView):
         self.privacy_and_security_button = Button(self.driver, accessibility_id="privacy-and-security-settings-button")
         self.accept_new_chats_from = Button(self.driver, accessibility_id="accept-new-chats-from")
         self.accept_new_chats_from_contacts_only = Button(self.driver, translation_id="contacts")
+        self.reset_password_button = Button(self.driver, accessibility_id="reset-password")
+        self.current_password_edit_box = EditBox(self.driver, accessibility_id="current-password")
+        self.new_password_edit_box = EditBox(self.driver, accessibility_id="new-password")
+        self.confirm_new_password_edit_box = EditBox(self.driver, accessibility_id="confirm-new-password")
+        self.current_password_wrong_text = Text(self.driver, accessibility_id="current-password-error")
+
         # Appearance
         self.appearance_button = Button(self.driver, accessibility_id="appearance-settings-button")
         self.show_profile_pictures_of = Button(self.driver, accessibility_id="show-profile-pictures")
@@ -244,6 +270,14 @@ class ProfileView(BaseView):
         self.advertise_device_button = Button(self.driver, accessibility_id="advertise-device")
         self.sync_all_button = Button(self.driver, translation_id="sync-all-devices")
 
+        #Keycard
+        self.keycard_button =  Button(self.driver, accessibility_id="keycard-button")
+        self.change_pin_button = KeycardButton(self.driver, translation_id="change-pin")
+        self.change_puk_button = KeycardButton(self.driver, translation_id="change-puk")
+        self.change_pairing_code_button = KeycardButton(self.driver, translation_id="change-pairing")
+        self.create_keycard_backup_button = KeycardButton(self.driver, translation_id="keycard-backup")
+
+
         # Advanced
         self.advanced_button = AdvancedButton(self.driver)
         ## Network
@@ -275,6 +309,7 @@ class ProfileView(BaseView):
         #About
         self.about_button = AboutButton(self.driver)
         self.privacy_policy_button = PrivacyPolicyButton(self.driver)
+        self.terms_of_use_button = TermsOfUseButton(self.driver)
         self.app_version_text = Text(self.driver, xpath="//*[@content-desc='app-version']//android.widget.TextView[2]")
         self.node_version_text = Text(self.driver,
                                       xpath="//*[@content-desc='node-version']//android.widget.TextView[2]")
@@ -348,18 +383,12 @@ class ProfileView(BaseView):
         self.profile_picture.template = file_name
         if update_by == "Gallery":
             self.select_from_gallery_button.click()
-            if self.allow_button.is_element_displayed(sec=5):
-                self.allow_button.click()
-            image_full_content = self.get_image_in_storage_by_name(file_name)
-            if not image_full_content.is_element_displayed(2):
-                self.show_roots_button.click()
-                for element_text in 'Images', 'DCIM':
-                    self.element_by_text(element_text).click()
-            image_full_content.click()
+            self.select_photo_from_gallery(file_name)
         else:
             ## take by Photo
             self.take_photo()
             self.click_system_back_button()
+            self.profile_picture.click()
             self.take_photo()
             self.accept_photo_button.click()
         self.crop_photo_button.click()
@@ -375,6 +404,17 @@ class ProfileView(BaseView):
         if self.element_by_text("NEXT").is_element_displayed(sec=5):
             self.element_by_text("NEXT").click()
         self.shutter_button.click()
+
+    def select_photo_from_gallery(self, file_name: str):
+        if self.allow_button.is_element_displayed(sec=5):
+            self.allow_button.click()
+        image_full_content = self.get_image_in_storage_by_name(file_name)
+        if not image_full_content.is_element_displayed(2):
+            self.show_roots_button.click()
+            for element_text in 'Images', 'DCIM':
+                self.element_by_text(element_text).click()
+        image_full_content.click()
+
 
     def logout(self):
         self.driver.info("**Logging out**")

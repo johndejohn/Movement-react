@@ -67,7 +67,11 @@
                          :status nil))
       :hide-popover nil})
    (when-not (:multiaccounts/login db)
-     (navigation/navigate-to-cofx :keycard-pin nil))))
+     (navigation/change-tab :profile))
+   (when-not (:multiaccounts/login db)
+     (if (:popover/popover db)
+       (navigation/navigate-replace :keycard-pin nil)
+       (navigation/navigate-to-cofx :keycard-pin nil)))))
 
 (fx/defn dismiss-frozen-keycard-popover
   {:events [::frozen-keycard-popover-dismissed]}

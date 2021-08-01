@@ -200,27 +200,6 @@ RCT_EXPORT_METHOD(addPeer:(NSString *)enode
 #endif
 }
 
-//////////////////////////////////////////////////////////////////// getNodesFromContract
-RCT_EXPORT_METHOD(getNodesFromContract:(NSString *)url
-                               address:(NSString *) address
-                              callback:(RCTResponseSenderBlock)callback) {
-  NSString* result = StatusgoGetNodesFromContract(url, address);
-  callback(@[result]);
-#if DEBUG
-  NSLog(@"GetNodesFromContract() method called");
-#endif
-}
-
-//////////////////////////////////////////////////////////////////// chaosModeUpdate
-RCT_EXPORT_METHOD(chaosModeUpdate:(BOOL)on
-                  callback:(RCTResponseSenderBlock)callback) {
-  NSString* result = StatusgoChaosModeUpdate(on);
-  callback(@[result]);
-#if DEBUG
-  NSLog(@"ChaosModeUpdate() method called");
-#endif
-}
-
 //////////////////////////////////////////////////////////////////// multiAccountImportPrivateKey
 RCT_EXPORT_METHOD(deleteMultiaccount:(NSString *)keyUID
                   callback:(RCTResponseSenderBlock)callback) {
@@ -591,6 +570,17 @@ RCT_EXPORT_METHOD(verify:(NSString *)address
     callback(@[result]);
 }
 
+//////////////////////////////////////////////////////////////////// verifyDatabasePassword
+RCT_EXPORT_METHOD(verifyDatabasePassword:(NSString *)keyUID
+                  password:(NSString *)password
+                  callback:(RCTResponseSenderBlock)callback) {
+#if DEBUG
+    NSLog(@"VerifyDatabasePassword() method called");
+#endif
+    NSString *result = StatusgoVerifyDatabasePassword(keyUID, password);
+    callback(@[result]);
+}
+
 //////////////////////////////////////////////////////////////////// changeDatabasePassword
 RCT_EXPORT_METHOD(reEncryptDbAndKeystore:(NSString *)keyUID
                   currentPassword:(NSString *)currentPassword
@@ -601,6 +591,21 @@ RCT_EXPORT_METHOD(reEncryptDbAndKeystore:(NSString *)keyUID
 #endif
     // changes password and re-encrypts keystore
     NSString *result = StatusgoChangeDatabasePassword(keyUID, currentPassword, newPassword);
+    callback(@[result]);
+}
+
+//////////////////////////////////////////////////////////////////// convertToKeycardAccount
+RCT_EXPORT_METHOD(convertToKeycardAccount:(NSString *)keyUID
+                  accountData:(NSString *)accountData
+                  settings:(NSString *)settings
+                  currentPassword:(NSString *)currentPassword
+                  newPassword:(NSString *)newPassword
+                  callback:(RCTResponseSenderBlock)callback) {
+#if DEBUG
+    NSLog(@"convertToKeycardAccount() method called");
+#endif
+    NSURL *multiaccountKeystoreDir = [self getKeyStoreDir:keyUID];
+    NSString *result = StatusgoConvertToKeycardAccount(multiaccountKeystoreDir.path, accountData, settings, currentPassword, newPassword);
     callback(@[result]);
 }
 
@@ -680,6 +685,18 @@ RCT_EXPORT_METHOD(extractGroupMembershipSignatures:(NSString *)content
     NSString *result = StatusgoExtractGroupMembershipSignatures(content);
     callback(@[result]);
 }
+
+////////////////////////////////////////////////////////////////////
+#pragma mark - GetNodeConfig
+//////////////////////////////////////////////////////////////////// getNodeConfig
+RCT_EXPORT_METHOD(getNodeConfig:(RCTResponseSenderBlock)callback) {
+#if DEBUG
+    NSLog(@"GetNodeConfig() method called");
+#endif
+    NSString *result = StatusgoGetNodeConfig();
+    callback(@[result]);
+}
+
 
 ////////////////////////////////////////////////////////////////////
 #pragma mark - only android methods

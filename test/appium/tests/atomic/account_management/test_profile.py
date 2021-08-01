@@ -147,6 +147,44 @@ class TestProfileSingleDevice(SingleDeviceTestCase):
 
         self.errors.verify_no_errors()
 
+    @marks.testrail_id(695850)
+    @marks.medium
+    def test_can_reset_password(self):
+        sign_in = SignInView(self.driver)
+        home = sign_in.create_user()
+        new_password = basic_user['special_chars_password']
+        profile = home.profile_button.click()
+        profile.privacy_and_security_button.click()
+
+        profile.just_fyi("Check that can not reset password when entering wrong current password")
+        profile.reset_password_button.click()
+        profile.current_password_edit_box.send_keys(common_password + '1')
+        profile.new_password_edit_box.set_value(new_password)
+        profile.confirm_new_password_edit_box.set_value(new_password)
+        profile.next_button.click()
+        if not profile.current_password_wrong_text.is_element_displayed():
+            self.errors.append("Validation error for wrong current password is not shown")
+
+        profile.just_fyi("Check that can not procced if did not confirm new password")
+        profile.current_password_edit_box.clear()
+        profile.current_password_edit_box.set_value(common_password)
+        profile.new_password_edit_box.set_value(new_password)
+        profile.confirm_new_password_edit_box.set_value(new_password+'1')
+        profile.next_button.click()
+
+        profile.just_fyi("Delete last symbol and check that can reset password")
+        profile.confirm_new_password_edit_box.delete_last_symbols(1)
+        profile.next_button.click()
+        profile.element_by_translation_id("password-reset-success").wait_for_element(30)
+        profile.element_by_translation_id("okay").click()
+
+        profile.just_fyi("Login with new password")
+        sign_in.sign_in(password=new_password)
+        if not sign_in.home_button.is_element_displayed():
+            self.errors.append("Could not sign in with new password after reset")
+
+        self.errors.verify_no_errors()
+
     @marks.testrail_id(6296)
     @marks.high
     def test_recover_account_from_new_user_seedphrase(self):
@@ -333,25 +371,34 @@ class TestProfileSingleDevice(SingleDeviceTestCase):
 
     @marks.testrail_id(5453)
     @marks.medium
-    def test_privacy_policy_node_version_need_help_in_profile(self):
+    # @marks.flaky
+    def test_privacy_policy_terms_of_use_node_version_need_help_in_profile(self):
         signin = SignInView(self.driver)
         no_link_found_error_msg = 'Could not find privacy policy link at'
         no_link_open_error_msg = 'Could not open our privacy policy from'
+        no_link_tos_error_msg = 'Could not open Terms of Use from'
 
-        signin.just_fyi("Checking privacy policy from sign in and from profile")
-        if not signin.privacy_policy_link.is_element_displayed():
-            self.driver.fail('%s Sign in view!' % no_link_found_error_msg)
-        web_page = signin.privacy_policy_link.click()
-        web_page.open_in_webview()
-        if not web_page.policy_summary.is_element_displayed():
-            self.errors.append('%s Sign in view!' % no_link_open_error_msg)
-        web_page.close_privacy_policy_button.click()
+        signin.just_fyi("Checking privacy policy and TOS links")
+        if not signin.privacy_policy_link.is_element_present():
+            self.errors.append('%s Sign in view!' % no_link_found_error_msg)
+        if not signin.terms_of_use_link.is_element_displayed():
+            self.driver.fail("No Terms of Use link on Sign in view!")
+
         home = signin.create_user()
         profile = home.profile_button.click()
         profile.about_button.click()
         profile.privacy_policy_button.click()
+        from views.web_views.base_web_view import BaseWebView
+        web_page = BaseWebView(self.driver)
         if not web_page.policy_summary.is_element_displayed():
             self.errors.append('%s Profile about view!' % no_link_open_error_msg)
+        web_page.click_system_back_button()
+
+        profile.terms_of_use_button.click()
+        web_page.wait_for_d_aap_to_load()
+        web_page.swipe_by_custom_coordinates(0.5,0.8,0.5,0.4)
+        if not web_page.terms_of_use_summary.is_element_displayed():
+            self.errors.append('%s Profile about view!' % no_link_tos_error_msg)
         web_page.click_system_back_button()
 
         signin.just_fyi("Checking that version match expected format and can be copied")
@@ -384,7 +431,7 @@ class TestProfileSingleDevice(SingleDeviceTestCase):
             self.errors.append("Mail client is not opened when submitting bug")
         profile.click_system_back_button()
         profile.request_a_feature_button.click()
-        if  not profile.element_by_text("#support").is_element_displayed():
+        if not profile.element_by_text("#support").is_element_displayed():
             self.errors.append("Support channel is not suggested for requesting a feature")
         self.errors.verify_no_errors()
 
@@ -875,26 +922,27 @@ class TestProfileMultipleDevice(MultipleDeviceTestCase):
         public_chat_1 = home_1.join_public_chat(public_chat_name)
         public_chat_1.relogin()
 
-        profile_1.just_fyi('check that still connected to custom mailserver after relogin')
-        home_1.profile_button.click()
-        profile_1.sync_settings_button.click()
-        if not profile_1.element_by_text(server_name).is_element_displayed():
-            self.drivers[0].fail("Not connected to custom mailserver after re-login")
-
-        profile_1.just_fyi('check that can RETRY to connect')
-        profile_1.element_by_translation_id(id='mailserver-error-title').wait_for_element(60)
-        public_chat_1.element_by_translation_id(id='mailserver-retry', uppercase=True).wait_and_click(60)
-
-        profile_1.just_fyi('check that can pick another mailserver and receive messages')
-        profile_1.element_by_translation_id(id='mailserver-error-title').wait_for_element(60)
-        profile_1.element_by_translation_id(id='mailserver-pick-another', uppercase=True).wait_and_click(120)
-        mailserver = profile_1.return_mailserver_name(mailserver_ams, used_fleet)
-        profile_1.element_by_text(mailserver).click()
-        profile_1.confirm_button.click()
-        profile_1.home_button.click()
-        home_1.get_chat('#%s' % public_chat_name).click()
-        if not public_chat_1.chat_element_by_text(message).is_element_displayed(60):
-            self.errors.append("Chat history wasn't fetched")
+        # TODO: blocked due to 11786
+        # profile_1.just_fyi('check that still connected to custom mailserver after relogin')
+        # home_1.profile_button.click()
+        # profile_1.sync_settings_button.click()
+        # if not profile_1.element_by_text(server_name).is_element_displayed():
+        #     self.drivers[0].fail("Not connected to custom mailserver after re-login")
+        #
+        # profile_1.just_fyi('check that can RETRY to connect')
+        # profile_1.element_by_translation_id(id='mailserver-error-title').wait_for_element(60)
+        # public_chat_1.element_by_translation_id(id='mailserver-retry', uppercase=True).wait_and_click(60)
+        #
+        # profile_1.just_fyi('check that can pick another mailserver and receive messages')
+        # profile_1.element_by_translation_id(id='mailserver-error-title').wait_for_element(60)
+        # profile_1.element_by_translation_id(id='mailserver-pick-another', uppercase=True).wait_and_click(120)
+        # mailserver = profile_1.return_mailserver_name(mailserver_ams, used_fleet)
+        # profile_1.element_by_text(mailserver).click()
+        # profile_1.confirm_button.click()
+        # profile_1.home_button.click()
+        # home_1.get_chat('#%s' % public_chat_name).click()
+        # if not public_chat_1.chat_element_by_text(message).is_element_displayed(60):
+        #     self.errors.append("Chat history wasn't fetched")
 
         self.errors.verify_no_errors()
 

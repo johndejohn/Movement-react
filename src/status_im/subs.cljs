@@ -39,7 +39,9 @@
             [status-im.chat.models.mentions :as mentions]
             [status-im.notifications.core :as notifications]
             [status-im.utils.currency :as currency]
-            [clojure.set :as clojure.set]))
+            [status-im.signing.eip1559 :as eip1559]
+            [clojure.set :as clojure.set]
+            [status-im.ui.components.colors :as colors]))
 
 ;; TOP LEVEL ===========================================================================================================
 
@@ -100,6 +102,7 @@
 (reg-root-key-sub :multiaccounts/key-storage :multiaccounts/key-storage)
 (reg-root-key-sub :multiaccount/reset-password-form-vals :multiaccount/reset-password-form-vals)
 (reg-root-key-sub :multiaccount/reset-password-errors :multiaccount/reset-password-errors)
+(reg-root-key-sub :multiaccount/resetting-password? :multiaccount/resetting-password?)
 
 ;;chat
 (reg-root-key-sub ::cooldown-enabled? :chat/cooldown-enabled?)
@@ -162,7 +165,8 @@
 (reg-root-key-sub :wallet/refreshing-history? :wallet/refreshing-history?)
 (reg-root-key-sub :wallet/fetching-error :wallet/fetching-error)
 (reg-root-key-sub :wallet/non-archival-node :wallet/non-archival-node)
-
+(reg-root-key-sub :wallet/latest-base-fee :wallet/latest-base-fee)
+(reg-root-key-sub :wallet/latest-priority-fee :wallet/latest-priority-fee)
 ;;commands
 (reg-root-key-sub :commands/select-account :commands/select-account)
 
@@ -195,6 +199,8 @@
 (reg-root-key-sub ::reactions :reactions)
 (reg-root-key-sub ::message-lists :message-lists)
 (reg-root-key-sub ::pagination-info :pagination-info)
+(reg-root-key-sub ::pin-message-lists :pin-message-lists)
+(reg-root-key-sub ::pin-messages :pin-messages)
 
 (reg-root-key-sub :tos-accept-next-root :tos-accept-next-root)
 
@@ -259,6 +265,12 @@
  :<- [:communities]
  (fn [communities [_ id]]
    (get communities id)))
+
+(re-frame/reg-sub
+ :communities/community-chats
+ :<- [:communities]
+ (fn [communities [_ id]]
+   (get-in communities [id :chats])))
 
 (re-frame/reg-sub
  :communities/communities
@@ -443,8 +455,12 @@
 (re-frame/reg-sub
  :disconnected?
  :<- [:peers-count]
- (fn [peers-count]
-   (zero? peers-count)))
+ :<- [:waku/v2-flag]
+ (fn [[peers-count wakuv2-flag]]
+   ;; TODO Right now wakuv2 module in status-go
+   ;; does not report peer counts properly,
+   ;; so we always assume that we're connected
+   (if wakuv2-flag false (zero? peers-count))))
 
 (re-frame/reg-sub
  :offline?
@@ -633,6 +649,12 @@
    (boolean (get multiaccount :waku-bloom-filter-mode))))
 
 (re-frame/reg-sub
+ :waku/v2-flag
+ :<- [:fleets/current-fleet]
+ (fn [fleet]
+   (string/starts-with? (name fleet) "wakuv2")))
+
+(re-frame/reg-sub
  :dapps-address
  :<- [:multiaccount]
  (fn [acc]
@@ -745,6 +767,47 @@
                 (when (= (:community-id chat) community-id)
                   chat)))
         (sort-by :timestamp >))))
+
+(re-frame/reg-sub
+ :chats/with-empty-category-by-community-id
+ (fn [[_ community-id]]
+   [(re-frame/subscribe [:chats/by-community-id community-id])
+    (re-frame/subscribe [:communities/community-chats community-id])])
+ (fn [[chats comm-chats] [_ community-id]]
+   (filter #(string/blank? (get-in comm-chats [(string/replace (:chat-id %) community-id "") :categoryID])) chats)))
+
+(re-frame/reg-sub
+ :chats/categories-by-community-id
+ (fn [[_ community-id]]
+   [(re-frame/subscribe [:chats/by-community-id community-id])
+    (re-frame/subscribe [:communities/community-chats community-id])])
+ (fn [[chats comm-chats] [_ community-id]]
+   (let [chat-cat (into {} (map (fn [{:keys [id categoryID]}] {(str community-id id) categoryID}) (vals comm-chats)))]
+     (group-by :categoryID (map #(cond-> (assoc % :categoryID (chat-cat (:chat-id %)))
+                                   (= community-id constants/status-community-id)
+                                   (assoc :color colors/blue))
+                                chats)))))
+
+(re-frame/reg-sub
+ :chats/category-by-chat-id
+ (fn [[_ community-id _]]
+   [(re-frame/subscribe [:communities/community community-id])])
+ (fn [[{:keys [chats categories]}] [_ community-id chat-id]]
+   (get categories (get-in chats [(string/replace chat-id community-id "") :categoryID]))))
+
+(re-frame/reg-sub
+ :chats/community-chat-by-id
+ (fn [[_ community-id _]]
+   [(re-frame/subscribe [:communities/community community-id])])
+ (fn [[{:keys [chats]}] [_ community-id chat-id]]
+   (get chats (string/replace chat-id community-id ""))))
+
+(re-frame/reg-sub
+ :community/categories
+ (fn [[_ community-id]]
+   [(re-frame/subscribe [:communities/community community-id])])
+ (fn [[{:keys [categories]}] _]
+   categories))
 
 (re-frame/reg-sub
  :chats/current-chat-ui-props
@@ -874,7 +937,7 @@
  :chats/current-chat-chat-view
  :<- [:chats/current-chat]
  (fn [current-chat]
-   (select-keys current-chat [:chat-id :show-input? :group-chat :admins :invitation-admin :public? :chat-type :color :chat-name :synced-to :synced-from])))
+   (select-keys current-chat [:chat-id :show-input? :group-chat :admins :invitation-admin :public? :chat-type :color :chat-name :synced-to :synced-from :community-id])))
 
 (re-frame/reg-sub
  :current-chat/metadata
@@ -911,6 +974,12 @@
    (get messages chat-id {})))
 
 (re-frame/reg-sub
+ :chats/pinned
+ :<- [::pin-messages]
+ (fn [pin-messages [_ chat-id]]
+   (get pin-messages chat-id {})))
+
+(re-frame/reg-sub
  :chats/message-reactions
  :<- [:multiaccount/public-key]
  :<- [::reactions]
@@ -940,6 +1009,12 @@
    (get-in pagination-info [chat-id :loading-messages?])))
 
 (re-frame/reg-sub
+ :chats/loading-pin-messages?
+ :<- [::pagination-info]
+ (fn [pagination-info [_ chat-id]]
+   (get-in pagination-info [chat-id :loading-pin-messages?])))
+
+(re-frame/reg-sub
  :chats/public?
  :<- [::chats]
  (fn [chats [_ chat-id]]
@@ -951,14 +1026,25 @@
  (fn [message-lists [_ chat-id]]
    (get message-lists chat-id)))
 
+(re-frame/reg-sub
+ :chats/pin-message-list
+ :<- [::pin-message-lists]
+ (fn [pin-message-lists [_ chat-id]]
+   (get pin-message-lists chat-id)))
+
 (defn hydrate-messages
   "Pull data from messages and add it to the sorted list"
-  [message-list messages]
-  (keep #(if (= :message (% :type))
-           (when-let [message (messages (% :message-id))]
-             (merge message %))
-           %)
-        message-list))
+  ([message-list messages] (hydrate-messages message-list messages {}))
+  ([message-list messages pinned-messages]
+   (keep #(if (= :message (% :type))
+            (when-let [message (messages (% :message-id))]
+              (let [pinned-message (get pinned-messages (% :message-id))
+                    pinned (if pinned-message true (some? (message :pinned-by)))
+                    pinned-by (when pinned (or (message :pinned-by) (pinned-message :pinned-by)))
+                    message (assoc message :pinned pinned :pinned-by pinned-by)]
+                (merge message %)))
+            %)
+         message-list)))
 
 (re-frame/reg-sub
  :chats/chat-no-messages?
@@ -972,11 +1058,12 @@
  (fn [[_ chat-id] _]
    [(re-frame/subscribe [:chats/message-list chat-id])
     (re-frame/subscribe [:chats/chat-messages chat-id])
+    (re-frame/subscribe [:chats/pinned chat-id])
     (re-frame/subscribe [:chats/loading-messages? chat-id])
     (re-frame/subscribe [:chats/synced-from chat-id])
     (re-frame/subscribe [:chats/chat-type chat-id])
     (re-frame/subscribe [:chats/joined chat-id])])
- (fn [[message-list messages loading-messages? synced-from chat-type joined] [_ chat-id]]
+ (fn [[message-list messages pin-messages loading-messages? synced-from chat-type joined] [_ chat-id]]
    ;;TODO (perf)
    (let [message-list-seq (models.message-list/->seq message-list)]
      ; Don't show gaps if that's the case as we are still loading messages
@@ -984,8 +1071,25 @@
        []
        (-> message-list-seq
            (chat.db/add-datemarks)
-           (hydrate-messages messages)
+           (hydrate-messages messages pin-messages)
            (chat.db/collapse-gaps chat-id synced-from (datetime/timestamp) chat-type joined loading-messages?))))))
+
+(re-frame/reg-sub
+ :chats/raw-chat-pin-messages-stream
+ (fn [[_ chat-id] _]
+   [(re-frame/subscribe [:chats/pin-message-list chat-id])
+    (re-frame/subscribe [:chats/pinned chat-id])
+    (re-frame/subscribe [:chats/loading-pin-messages? chat-id])
+    (re-frame/subscribe [:chats/synced-from chat-id])])
+ (fn [[pin-message-list messages loading-messages?] [_]]
+   ;;TODO (perf)
+   (let [pin-message-list-seq (models.message-list/->seq pin-message-list)]
+     ; Don't show gaps if that's the case as we are still loading messages
+     (if (and (empty? pin-message-list-seq) loading-messages?)
+       []
+       (-> pin-message-list-seq
+           (chat.db/add-datemarks)
+           (hydrate-messages messages))))))
 
 ;;we want to keep data unchanged so react doesn't change component when we leave screen
 (def memo-chat-messages-stream (atom nil))
@@ -1701,7 +1805,12 @@
  :activity.center/notifications-grouped-by-date
  :<- [:activity.center/notifications]
  (fn [{:keys [notifications]}]
-   (group-notifications-by-date (map #(assoc % :timestamp (or (:timestamp %) (:timestamp (or (:message %) (:last-message %))))) notifications))))
+   (let [supported-notifications (filter (fn [{:keys [type]}]
+                                           (or (= constants/activity-center-notification-type-mention type)
+                                               (= constants/activity-center-notification-type-one-to-one-chat type)
+                                               (= constants/activity-center-notification-type-private-group-chat type)
+                                               (= constants/activity-center-notification-type-reply type))) notifications)]
+     (group-notifications-by-date (map #(assoc % :timestamp (or (:timestamp %) (:timestamp (or (:message %) (:last-message %))))) supported-notifications)))))
 
 ;;WALLET TRANSACTIONS ==================================================================================================
 
@@ -2438,8 +2547,29 @@
 (re-frame/reg-sub
  :signing/fee
  :<- [:signing/tx]
- (fn [{:keys [gas gasPrice]}]
-   (signing.gas/calculate-max-fee gas gasPrice)))
+ (fn [{:keys [gas gasPrice maxFeePerGas]}]
+   (signing.gas/calculate-max-fee gas (or maxFeePerGas gasPrice))))
+
+(re-frame/reg-sub
+ :signing/currencies
+ :<- [:prices]
+ :<- [:wallet/currency]
+ :<- [:ethereum/native-currency]
+ (fn [[prices {:keys [code]} {:keys [symbol]}]]
+   [(name symbol)
+    code
+    (get-in prices [symbol (keyword code) :price])]))
+
+(re-frame/reg-sub
+ :signing/priority-fee-suggestions-range
+ :<- [:wallet/latest-priority-fee]
+ (fn [latest-fee]
+   [0 (->> latest-fee
+           money/bignumber
+           (money/wei-> :gwei)
+           (money/mul (money/bignumber 2))
+           money/to-fixed
+           js/parseFloat)]))
 
 (re-frame/reg-sub
  :signing/phrase
@@ -2512,12 +2642,13 @@
    [(re-frame/subscribe [:signing/tx])
     (re-frame/subscribe [:balance address])])
  (fn [[{:keys [amount token gas gasPrice approve? gas-error-message]} balance]]
-   (if (and amount token (not approve?))
-     (let [amount-bn (money/formatted->internal (money/bignumber amount) (:symbol token) (:decimals token))
-           amount-error (or (get-amount-error amount (:decimals token))
-                            (get-sufficient-funds-error balance (:symbol token) amount-bn))]
-       (merge amount-error (get-sufficient-gas-error gas-error-message balance (:symbol token) amount-bn gas gasPrice)))
-     (get-sufficient-gas-error gas-error-message balance nil nil gas gasPrice))))
+   (when-not (eip1559/sync-enabled?)
+     (if (and amount token (not approve?))
+       (let [amount-bn (money/formatted->internal (money/bignumber amount) (:symbol token) (:decimals token))
+             amount-error (or (get-amount-error amount (:decimals token))
+                              (get-sufficient-funds-error balance (:symbol token) amount-bn))]
+         (merge amount-error (get-sufficient-gas-error gas-error-message balance (:symbol token) amount-bn gas gasPrice)))
+       (get-sufficient-gas-error gas-error-message balance nil nil gas gasPrice)))))
 
 (re-frame/reg-sub
  :wallet.send/prepare-transaction-with-balance
@@ -2656,10 +2787,12 @@
  :multiaccount/reset-password-form-vals-and-errors
  :<- [:multiaccount/reset-password-form-vals]
  :<- [:multiaccount/reset-password-errors]
- (fn [[form-vals errors]]
+ :<- [:multiaccount/resetting-password?]
+ (fn [[form-vals errors resetting?]]
    (let [{:keys [current-password new-password confirm-new-password]} form-vals]
-     {:form-vals form-vals
-      :errors    errors
+     {:form-vals  form-vals
+      :errors     errors
+      :resetting? resetting?
       :next-enabled?
       (and (pos? (count current-password))
            (pos? (count new-password))

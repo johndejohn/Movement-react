@@ -102,8 +102,6 @@ class TestGroupChatMultipleDevice(MultipleDeviceTestCase):
         devices_chat[0].accept_group_invitation_button.click()
         devices_chat[0].accept_membership_for_group_chat_via_chat_view(devices_username[2], accept=False)
         devices_chat[0].click_system_back_button()
-        devices_chat[1].just_fyi('Member_1: join chat')
-        devices_chat[1].join_chat_button.click()
         devices_chat[2].just_fyi('Member_2: retry request')
         devices_chat[2].retry_group_invite_button.click()
         devices_chat[2].request_membership_for_group_chat(introduction_messages[0])
@@ -228,7 +226,7 @@ class TestGroupChatMultipleDevice(MultipleDeviceTestCase):
         device_1_chat.send_message_button.click()
         device_1_chat.chat_message_input.click()
         for chat in device_1_chat, device_2_chat, device_3_chat:
-            if not chat.image_chat_item.is_element_displayed(60):
+            if not chat.image_message_in_chat.is_element_displayed(60):
                 self.errors.append('Image is not shown in chat after sending for %s' % chat.driver.number)
         device_1.just_fyi('Send audio message to group chat and verify it on all devices')
         device_1_chat.record_audio_message(message_length_in_seconds=3)

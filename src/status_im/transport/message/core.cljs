@@ -1,6 +1,7 @@
 (ns ^{:doc "Definition of the StatusMessage protocol"}
  status-im.transport.message.core
   (:require [status-im.chat.models.message :as models.message]
+            [status-im.chat.models.pin-message :as models.pin-message]
             [status-im.chat.models :as models.chat]
             [status-im.chat.models.reactions :as models.reactions]
             [status-im.contact.core :as models.contact]
@@ -11,6 +12,7 @@
             [status-im.data-store.chats :as data-store.chats]
             [status-im.data-store.invitations :as data-store.invitations]
             [status-im.data-store.activities :as data-store.activities]
+            [status-im.data-store.messages :as data-store.messages]
             [status-im.group-chats.core :as models.group]
             [status-im.utils.fx :as fx]
             [status-im.utils.types :as types]
@@ -38,6 +40,7 @@
         ^js invitations (.-invitations response-js)
         ^js removed-chats (.-removedChats response-js)
         ^js activity-notifications (.-activityCenterNotifications response-js)
+        ^js pin-messages (.-pinMessages response-js)
         sync-handler (when-not process-async process-response)]
 
     (cond
@@ -85,20 +88,27 @@
         (js-delete response-js "communities")
         (fx/merge cofx
                   (process-next response-js sync-handler)
-                  (models.communities/handle-communities (types/js->clj communities-clj))))
+                  (models.communities/handle-communities communities-clj)))
+
+      (seq pin-messages)
+      (let [pin-messages (types/js->clj pin-messages)]
+        (js-delete response-js "pinMessages")
+        (fx/merge cofx
+                  (process-next response-js sync-handler)
+                  (models.pin-message/receive-signal (map data-store.messages/<-rpc pin-messages))))
 
       (seq removed-chats)
       (let [removed-chats-clj (types/js->clj removed-chats)]
         (js-delete response-js "removedChats")
         (fx/merge cofx
                   (process-next response-js sync-handler)
-                  (models.communities/handle-removed-chats (types/js->clj removed-chats-clj))))
+                  (models.communities/handle-removed-chats removed-chats-clj)))
 
       (seq requests-to-join-community)
-      (let [request (.pop requests-to-join-community)]
+      (let [request-js (types/js->clj (.pop requests-to-join-community))]
         (fx/merge cofx
                   (process-next response-js sync-handler)
-                  (models.communities/handle-request-to-join (types/js->clj request))))
+                  (models.communities/handle-request-to-join request-js)))
 
       (seq emoji-reactions)
       (let [reactions (types/js->clj emoji-reactions)]

@@ -16,16 +16,20 @@ class KeycardView(BaseView):
         self.connect_pairing_card_button = Button(self.driver, accessibility_id="connect-pairing-card")
 
         # Keyboard
-        self.one_button = SilentButton(self.driver, xpath="//*[@text='1']")
-        self.two_button = SilentButton(self.driver, xpath="//*[@text='2']")
+        self.zero_button = SilentButton(self.driver, accessibility_id="numpad-button-0")
+        self.one_button = SilentButton(self.driver, accessibility_id="numpad-button-1")
+        self.two_button = SilentButton(self.driver, accessibility_id="numpad-button-2")
 
         # Backup seed phrase
         self.confirm_seed_phrase_edit_box = EditBox(self.driver, accessibility_id="enter-word")
 
     def enter_default_pin(self):
         self.driver.info("**Enter default pin 111111**")
-        for _ in range(6):
-            self.one_button.click()
+        [self.one_button.click() for _ in range(6)]
+
+    def enter_default_puk(self):
+        self.driver.info("**Enter default pin 1111 1111 1111**")
+        [self.one_button.click() for _ in range(12)]
 
     def enter_another_pin(self):
         self.driver.info("**Enter not-default pin 222222**")

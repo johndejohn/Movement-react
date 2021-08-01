@@ -71,6 +71,7 @@
 (def max-5-group-chat-participants 5000)
 (def max-group-chat-participants 10000)
 (def ^:const default-number-of-messages 20)
+(def ^:const default-number-of-pin-messages 3)
 
 (def ^:const mailserver-password "status-offline-inbox")
 
@@ -156,7 +157,9 @@
 (def ^:const privacy-policy-link "https://status.im/privacy-policy/")
 (def ^:const terms-of-service-link "https://status.im/terms-of-use")
 (def ^:const docs-link "https://status.im/docs/")
+(def ^:const principles-link "https://our.status.im/our-principles/")
 
 (def ^:const activity-center-notification-type-one-to-one-chat 1)
 (def ^:const activity-center-notification-type-private-group-chat 2)
 (def ^:const activity-center-notification-type-mention 3)
+(def ^:const activity-center-notification-type-reply 4)

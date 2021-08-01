@@ -19,7 +19,9 @@
             [status-im.ui.screens.biometric.views :as biometric]
             [status-im.ui.components.colors :as colors]
             [status-im.ui.screens.keycard.views :as keycard.views]
-            [status-im.ui.screens.keycard.frozen-card.view :as frozen-card]))
+            [status-im.ui.screens.keycard.frozen-card.view :as frozen-card]
+            [status-im.ui.screens.chat.message.pinned-message :as pinned-message]
+            [status-im.ui.screens.signing.sheets :as signing-sheets]))
 
 (defn hide-panel-anim
   [bottom-anim-value alpha-value window-height]
@@ -170,8 +172,14 @@
                    (= :transfer-multiaccount-unknown-error view)
                    [multiaccounts.key-storage/unknown-error-popover]
 
-                   (= :password-reset-success view)
-                   [reset-password.views/reset-success-popover]
+                   (= :password-reset-popover view)
+                   [reset-password.views/reset-password-popover]
+
+                   (= :pin-limit view)
+                   [pinned-message/pin-limit-popover]
+
+                   (= :fees-warning view)
+                   [signing-sheets/fees-warning]
 
                    :else
                    [view])]]]]])))})))

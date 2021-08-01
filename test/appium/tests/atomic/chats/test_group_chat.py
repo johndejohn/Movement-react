@@ -2,7 +2,6 @@ from tests import marks
 from tests.base_test_case import MultipleDeviceTestCase, SingleDeviceTestCase
 from tests.users import transaction_senders, ens_user
 from views.sign_in_view import SignInView
-from time import sleep
 import random, emoji
 
 
@@ -55,7 +54,7 @@ class TestGroupChatMultipleDevice(MultipleDeviceTestCase):
         device_2.just_fyi('Join to group chat, check system messages and send messages to group chat, check message status is delivered')
         device_2_chat.join_chat_button.click()
         for chat in (device_1_chat, device_2_chat):
-            if not chat.chat_element_by_text(join_system_message).is_element_displayed():
+            if not chat.chat_element_by_text(join_system_message).is_element_displayed(30):
                 self.drivers[0].fail('System message after joining group chat is not shown')
         device_2_chat.home_button.click(desired_view="home")
         message_1 = "Message from device: %s" % device_1_chat.driver.number
@@ -299,10 +298,9 @@ class TestGroupChatMultipleDevice(MultipleDeviceTestCase):
         device_2_options.view_profile_button.click()
         chat_1.set_nickname(nickname)
         if not chat_1.element_by_text(nickname).is_element_displayed():
-            self.errors.append('Nickname is not shown in profile view after setting from froup info')
+            self.errors.append('Nickname is not shown in profile view after setting from group info')
         chat_1.close_button.click()
-        if not chat_1.element_by_text(nickname).is_element_displayed():
-            self.errors.append('Nickname is not shown in group info view after setting from froup info')
+        chat_1.element_by_text(nickname).scroll_to_element()
         chat_1.close_button.click()
         message_text = '%s %s' % (nickname, additional_text)
         if not chat_1.chat_element_by_text(message_text).is_element_displayed():

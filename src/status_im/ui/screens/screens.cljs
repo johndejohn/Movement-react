@@ -105,7 +105,10 @@
             [status-im.ui.screens.communities.edit-channel :as edit-channel]
             [status-im.ui.screens.anonymous-metrics-settings.views :as anonymous-metrics-settings]
             [status-im.ui.components.colors :as colors]
-            [status-im.ui.components.icons.icons :as icons]))
+            [status-im.ui.components.icons.icons :as icons]
+            [status-im.ui.screens.chat.pinned-messages :as pin-messages]
+            [status-im.ui.screens.communities.create-category :as create-category]
+            [status-im.ui.screens.communities.select-category :as select-category]))
 
 (def components
   [{:name      :chat-toolbar
@@ -212,6 +215,12 @@
             :right-handler chat/topbar-button
             :component     chat/chat}
 
+           ;Pinned messages
+           {:name      :chat-pinned-messages
+                                        ;TODO custom subtitle
+            :options   {:topBar {:visible false}}
+            :component pin-messages/pinned-messages}
+
            {:name      :group-chat-profile
             :insets    {:top false}
             ;;TODO animated-header
@@ -252,10 +261,25 @@
             :options   {:topBar {:visible false}}
             :component requests-to-join/requests-to-join-container}
            {:name      :create-community-channel
+            :insets    {:bottom true}
+            :options   {:topBar {:title {:text (i18n/label :t/create-channel-title)}}}
+            :component create-channel/view}
+           {:name      :create-community-category
+            :insets    {:bottom true}
+            :options   {:topBar {:title {:text (i18n/label :t/new-category)}}}
+            :component create-category/view}
+           {:name      :select-category
+            :insets    {:bottom true}
             ;;TODO custom
             :options   {:topBar {:visible false}}
-            :component create-channel/view}
+            :component select-category/view}
+           {:name      :community-edit-chats
+            ;;TODO custom
+            :insets    {:bottom true}
+            :options   {:topBar {:visible false}}
+            :component community/community-edit}
            {:name      :community-channel-details
+            :insets    {:top false}
             ;;TODO custom
             :options   {:topBar {:visible false}}
             :component communities.channel-details/view}
@@ -363,6 +387,7 @@
 
            {:name      :my-profile
             :insets    {:top false}
+            :options   {:topBar {:visible false}}
             :component profile.user/my-profile}
            {:name      :contacts-list
             :options   {:topBar {:title {:text (i18n/label :t/contacts)}}}
@@ -448,11 +473,14 @@
             :options   {:topBar {:title {:text (i18n/label :t/about-app)}}}
             :component about-app/about-app}
            {:name      :privacy-policy
-            :options {:topBar {:title {:text (i18n/label :t/privacy-policy)}}}
+            :options   {:topBar {:title {:text (i18n/label :t/privacy-policy)}}}
             :component about-app/privacy-policy}
            {:name      :terms-of-service
-            :options {:topBar {:title {:text (i18n/label :t/terms-of-service)}}}
+            :options   {:topBar {:title {:text (i18n/label :t/terms-of-service)}}}
             :component about-app/tos}
+           {:name      :principles
+            :options   {:topBar {:title {:text (i18n/label :t/principles)}}}
+            :component about-app/principles}
            {:name      :force-accept-tos
             :options   {:topBar {:visible false}}
             :component terms-of-service/force-accept-tos}
@@ -779,13 +807,9 @@
             :component keycard.settings/reset-pin}
            {:name      :enter-pin-settings
             :insets    {:bottom true}
-            ;;TODO dynamic title
-            :options   {:topBar {:visible false}}
             :component keycard.pin/enter-pin}
            {:name      :change-pairing-code
             :insets    {:bottom true}
-            ;;TODO dynamic title
-            :options   {:topBar {:visible false}}
             :component keycard.pairing/change-pairing-code}
 
            ;;KEYSTORAGE

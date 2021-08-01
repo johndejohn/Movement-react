@@ -217,6 +217,8 @@
             (fn [{:keys [db]}]
               {:db (assoc db :current-chat-id chat-id :ignore-close-chat true)})
             (preload-chat-data chat-id)
+            (navigation/change-tab :chat)
+            (navigation/pop-to-root-tab :chat-stack)
             (navigation/navigate-to-cofx :chat nil)))
 
 (fx/defn handle-clear-history-response
@@ -227,10 +229,16 @@
 
 (fx/defn handle-one-to-one-chat-created
   {:events [::one-to-one-chat-created]}
-  [{:keys [db] :as cofx} chat-id response]
+  [{:keys [db]} chat-id response]
   (let [chat (chats-store/<-rpc (first (:chats response)))]
     {:db (assoc-in db [:chats chat-id] chat)
      :dispatch [:chat.ui/navigate-to-chat chat-id]}))
+
+(fx/defn navigate-to-user-pinned-messages
+  "Takes coeffects map and chat-id, returns effects necessary for navigation and preloading data"
+  {:events [:chat.ui/navigate-to-pinned-messages]}
+  [cofx chat-id]
+  (navigation/navigate-to cofx :chat-pinned-messages {:chat-id chat-id}))
 
 (fx/defn start-chat
   "Start a chat, making sure it exists"
