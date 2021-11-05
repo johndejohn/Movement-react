@@ -1,3 +1,4 @@
+
 (ns status-im.subs
   (:require [cljs.spec.alpha :as spec]
             [clojure.string :as string]
@@ -24,17 +25,8 @@
             [status-im.chat.models.reactions :as models.reactions]
             [status-im.pairing.core :as pairing]
             [status-im.signing.gas :as signing.gas]
-
-            
-            [status-im.ui.components.colors :as colors]
-            [status-im.ui.screens.add-new.new-public-chat.db :as db]
-            [status-im.ui.screens.mobile-network-settings.utils
-             :as
-             mobile-network-utils]
-
             [status-im.add-new.db :as db]
             [status-im.utils.mobile-sync :as mobile-network-utils]
-
             [status-im.utils.build :as build]
             [status-im.utils.config :as config]
             [status-im.utils.datetime :as datetime]
@@ -48,9 +40,9 @@
             [status-im.chat.models.mentions :as mentions]
             [status-im.notifications.core :as notifications]
             [status-im.utils.currency :as currency]
-            [status-im.signing.eip1559 :as eip1559]
             [clojure.set :as clojure.set]
-            [status-im.ui.components.colors :as colors]))
+            [quo.design-system.colors :as colors]
+            [status-im.ui.screens.profile.visibility-status.utils :as visibility-status-utils]))
 
 ;; TOP LEVEL ===========================================================================================================
 
