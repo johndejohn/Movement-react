@@ -27,12 +27,6 @@
               :symbol         :INT
               :symbol-display :INTri
 
-              :symbol-display :ETHro
-              :decimals       18}
-    :rinkeby {:name           "Rinkeby Inter"
-              :symbol         :INT
-              :symbol-display :ETHri
-
               :decimals       18}
     :poa     {:name           "POA"
               :symbol         :INT
