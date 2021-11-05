@@ -20,11 +20,19 @@
               :decimals 18}
     :testnet {:name           "Ropsten Inter"
               :symbol         :INT
+
               :symbol-display :INTro
               :decimals       18}
     :rinkeby {:name           "Rinkeby Inter"
               :symbol         :INT
               :symbol-display :INTri
+
+              :symbol-display :ETHro
+              :decimals       18}
+    :rinkeby {:name           "Rinkeby Inter"
+              :symbol         :INT
+              :symbol-display :ETHri
+
               :decimals       18}
     :poa     {:name           "POA"
               :symbol         :INT
@@ -143,8 +151,8 @@
                     :name     "Raiden Token"
                     :address  "0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6"
                     :decimals 18}
-                   {:symbol   :SNT
-                    :name     "Status Network Token"
+                   {:symbol   :MNT
+                    :name     "Movement Network Token"
                     :address  "0x744d70fdbe2ba4cf95131626614a1763df805b9e"
                     :decimals 18}
                    {:symbol   :SNGLS
@@ -766,8 +774,8 @@
                     :decimals 18}])
    :testnet
    (resolve-icons :testnet
-                  [{:name     "Status Test Token"
-                    :symbol   :STT
+                  [{:name     "Movement Test Token"
+                    :symbol   :MTT
                     :decimals 18
                     ;;NOTE(goranjovic): intentionally checksummed for purposes of testing
                     :address  "0xc55cf4b03948d7ebc8b9e8bad92643703811d162"}
@@ -806,8 +814,8 @@
                     :name     "WIBB"
                     :address  "0x7d4ccf6af2f0fdad48ee7958bcc28bdef7b732c7"
                     :decimals 18}
-                   {:name     "Status Test Token"
-                    :symbol   :STT
+                   {:name     "Movement Test Token"
+                    :symbol   :MTT
                     :decimals 18
                     :address  "0xc55cf4b03948d7ebc8b9e8bad92643703811d162"}])
 

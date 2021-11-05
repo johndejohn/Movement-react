@@ -232,6 +232,7 @@
     :currency-display-name-hkd
     :currency-display-name-hrk
     :currency-display-name-huf
+    :currency-display-name-int
     :currency-display-name-idr
     :currency-display-name-ils
     :currency-display-name-inr

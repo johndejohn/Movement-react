@@ -24,8 +24,17 @@
             [status-im.chat.models.reactions :as models.reactions]
             [status-im.pairing.core :as pairing]
             [status-im.signing.gas :as signing.gas]
+
+            
+            [status-im.ui.components.colors :as colors]
+            [status-im.ui.screens.add-new.new-public-chat.db :as db]
+            [status-im.ui.screens.mobile-network-settings.utils
+             :as
+             mobile-network-utils]
+
             [status-im.add-new.db :as db]
             [status-im.utils.mobile-sync :as mobile-network-utils]
+
             [status-im.utils.build :as build]
             [status-im.utils.config :as config]
             [status-im.utils.datetime :as datetime]
@@ -455,12 +464,17 @@
 (re-frame/reg-sub
  :disconnected?
  :<- [:peers-count]
+
  :<- [:waku/v2-flag]
  (fn [[peers-count wakuv2-flag]]
    ;; TODO Right now wakuv2 module in status-go
    ;; does not report peer counts properly,
    ;; so we always assume that we're connected
    (if wakuv2-flag false (zero? peers-count))))
+
+ (fn [peers-count]
+   (and (not config/nimbus-enabled?) (zero? peers-count))))
+
 
 (re-frame/reg-sub
  :offline?
@@ -2457,6 +2471,102 @@
     :tokens {true (apply-filter search-token-filter custom-tokens extract-token-attributes false)
              nil (apply-filter search-token-filter default-tokens extract-token-attributes false)}}))
 
+;; TRIBUTE TO TALK
+(re-frame/reg-sub
+ :tribute-to-talk/settings
+ :<- [:multiaccount]
+ :<- [:ethereum/chain-keyword]
+ (fn [[multiaccount chain-keyword]]
+   (get-in multiaccount [:tribute-to-talk]) chain-keyword))
+
+(re-frame/reg-sub
+ :tribute-to-talk/screen-params
+ :<- [:screen-params]
+ (fn [screen-params]
+   (get screen-params :tribute-to-talk)))
+
+(re-frame/reg-sub
+ :tribute-to-talk/profile
+ :<- [:tribute-to-talk/settings]
+ :<- [:tribute-to-talk/screen-params]
+ (fn [[{:keys [seen? snt-amount]}
+       {:keys [state unavailable?]}]]
+   (let [state (or state (if snt-amount :completed :disabled))
+         snt-amount (tribute-to-talk.db/from-wei snt-amount)]
+     (when config/tr-to-talk-enabled?
+       (if unavailable?
+         {:subtext "Change network to enable Tribute to Talk"
+          :active? false
+          :icon :main-icons/tribute-to-talk
+          :icon-color colors/gray}
+         (cond-> {:new? (not seen?)}
+           (and (not (and seen?
+                          snt-amount
+                          (#{:signing :pending :transaction-failed :completed} state))))
+           (assoc :subtext (i18n/label :t/tribute-to-talk-desc))
+
+           (#{:signing :pending} state)
+           (assoc :activity-indicator {:animating true
+                                       :color colors/blue}
+                  :subtext (case state
+                             :pending (i18n/label :t/pending-confirmation)
+                             :signing (i18n/label :t/waiting-to-sign)))
+
+           (= state :transaction-failed)
+           (assoc :icon :main-icons/warning
+                  :icon-color colors/red
+                  :subtext (i18n/label :t/transaction-failed))
+
+           (not (#{:signing :pending :transaction-failed} state))
+           (assoc :icon :main-icons/tribute-to-talk)
+
+           (and (= state :completed)
+                (not-empty snt-amount))
+           (assoc :accessory-value (str snt-amount " MNT"))))))))
+
+(re-frame/reg-sub
+ :tribute-to-talk/enabled?
+ :<- [:tribute-to-talk/settings]
+ (fn [settings]
+   (tribute-to-talk.db/enabled? settings)))
+
+(re-frame/reg-sub
+ :tribute-to-talk/settings-ui
+ :<- [:tribute-to-talk/settings]
+ :<- [:tribute-to-talk/screen-params]
+ :<- [:prices]
+ :<- [:wallet/currency]
+ (fn [[{:keys [seen? snt-amount message]
+        :as settings}
+       {:keys [step editing? state error]
+        :or {step :intro}
+        screen-snt-amount :snt-amount}
+       prices currency]]
+   (let [fiat-value (if snt-amount
+                      (money/fiat-amount-value
+                       snt-amount
+                       :SNT
+                       (-> currency :code keyword)
+                       prices)
+                      "0")]
+     (cond-> {:seen? seen?
+              :snt-amount (tribute-to-talk.db/from-wei snt-amount)
+              :message message
+              :enabled? (tribute-to-talk.db/enabled? settings)
+              :error error
+              :step step
+              :state (or state (if snt-amount :completed :disabled))
+              :editing? editing?
+              :fiat-value (str fiat-value " " (:code currency))}
+
+       (= step :set-snt-amount)
+       (assoc :snt-amount (str screen-snt-amount)
+              :disable-button?
+              (boolean (and (= step :set-snt-amount)
+                            (or (string/blank? screen-snt-amount)
+                                (#{"0" "0.0" "0.00"} screen-snt-amount)
+                                (string/ends-with? screen-snt-amount ".")))))))))
+
 ;;ENS ==================================================================================================================
 (re-frame/reg-sub
  :multiaccount/usernames
@@ -2483,7 +2593,7 @@
   (str (ens/registration-cost chain-id)
        (case chain-id
          3 " STT"
-         1 " SNT"
+         1 " MNT"
          "")))
 
 (re-frame/reg-sub
@@ -2503,8 +2613,8 @@
     :chain             chain
     :amount-label      (ens-amount-label chain-id)
     :sufficient-funds? (money/sufficient-funds?
-                        (money/formatted->internal (money/bignumber 10) :SNT 18)
-                        (get balance :SNT))}))
+                        (money/formatted->internal (money/bignumber 1) :MNT 18)
+                        (get balance :MNT))}))
 
 (re-frame/reg-sub
  :ens/confirmation-screen

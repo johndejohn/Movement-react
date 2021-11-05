@@ -192,6 +192,14 @@
         return sendAPIrequest('qr-code', {regex: regex});
     };
 
+<<<<<<< HEAD
+    EthereumProvider.prototype.on = function (type, handler)
+    {
+        console.log("Not supported by Movement")
+    }
+
+=======
+>>>>>>> 63893ff57599cfc1fed33da5d0f8f227f59e4192
     EthereumProvider.prototype.request = function (requestArguments)
     {
          if (window.statusAppDebug) { console.log("request: " + JSON.stringify(requestArguments)); }

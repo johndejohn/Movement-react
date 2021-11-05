@@ -350,7 +350,7 @@
             [react/view {:style (style/image-message-border style-opts)}]]]]]))))
 
 (defmulti ->message :content-type)
-
+ 
 (defmethod ->message constants/content-type-command
   [message]
   [message.command/command-content message-content-wrapper message])

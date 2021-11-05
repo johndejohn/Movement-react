@@ -4,7 +4,11 @@
 
 (deftest get-currency
   (is (= :int (models/get-currency {:multiaccount {:currency :int}})))
+
   (is (= :int (models/get-currency {:multiaccount {:not-empty "would throw an error if was empty"}})))
+
+  (is (= :usd (models/get-currency {:multiaccount {:not-empty "would throw an error if was empty"}})))
+
   (is (= :aud (models/get-currency {:multiaccount {:currency :aud}}))))
 
 (deftest set-currency

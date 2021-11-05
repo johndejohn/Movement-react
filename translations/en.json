@@ -26,7 +26,11 @@
     "add-bootnode": "Add bootnode",
     "add-contact": "Add contact",
     "add-custom-token": "Add custom token",
+
     "add-mailserver": "Add InterX",
+
+    "add-mailserver": "Add MovementX",
+
     "add-members": "Add members",
     "add-network": "Add network",
     "add-to-contacts": "Add to contacts",
@@ -153,6 +157,7 @@
     "close-app-title": "Warning!",
     "command-button-send": "Send",
 
+
     "communities": "Communities",
     "community-members": {
         "one": "{{count}} member",
@@ -222,6 +227,7 @@
     "enter-user-pk": "Enter user public key",
     "import": "Import",
 
+
     "complete-hardwallet-setup": "This card is now linked. You need it to sign transactions and unlock your keys",
     "chat-notification-preferences": "Notification settings",
     "completed": "Completed",
@@ -257,7 +263,9 @@
     "create": "Create",
     "create-a-pin": "Create a 6-digit passcode",
     "create-group-chat": "Create private house",
+
     "create-a-puk": "Create a 12-digit PUK",
+
     "create-multiaccount": "Generate keys",
     "create-new-key": "Get new keys",
     "create-pin": "Create 6-digit passcode",
@@ -405,9 +413,15 @@
     "delete-chat": "Delete chat",
     "delete-chat-confirmation": "Are you sure you want to delete this chat?",
     "delete-confirmation": "Delete?",
+
     "delete-mailserver": "Delete InterX",
     "delete-mailserver-are-you-sure": "Are you sure you want to delete this InterX?",
     "delete-mailserver-title": "Delete InterX",
+
+    "delete-mailserver": "Delete MovementX",
+    "delete-mailserver-are-you-sure": "Are you sure you want to delete this MovementX?",
+    "delete-mailserver-title": "Delete MovementX",
+
     "delete-message": "Delete message",
     "delete-my-account": "Delete my account",
     "delete-network-confirmation": "Are you sure you want to delete this network?",
@@ -552,8 +566,10 @@
     "ethereum-node-started-incorrectly-title": "Inter node started incorrectly",
     "etherscan-lookup": "Look up on Interscan",
     "export-account": "Export account",
+
     "export-key": "Export private key",
     "community-private-key": "Community private key",
+
     "failed": "Failed",
     "faq": "Frequently asked questions",
     "fetch-messages": "↓ Fetch messages",
@@ -563,8 +579,12 @@
     "finishing-card-setup": "Finishing card setup",
     "fleet": "Fleet",
     "fleet-settings": "Fleet settings",
+
     "follow-your-interests": "Top trending topics 🏆",
     "follow": "Follow",
+
+    "follow-your-interests": "Jump into a public house and meet new people",
+
     "free": "↓ Free",
     "from": "From",
     "gas-limit": "Gas limit",
@@ -609,7 +629,11 @@
     "hide-content-when-switching-apps": "Block screenshots",
     "hide-content-when-switching-apps-ios": "Hide preview",
     "history": "History",
+
     "history-nodes": "InterX",
+
+    "history-nodes": "MovementX",
+
     "hold-card": "Hold card to the back\n of your phone",
     "home": "Home",
     "hooks": "Hooks",
@@ -663,8 +687,10 @@
     "invalid-pairing-password": "Invalid pairing password",
     "invalid-range": "Invalid format, must be between {{min}} and {{max}}",
     "join-me": "Hey join me on Movement: {{url}}",
+
     "invalid-username-or-key": "Invalid username or chat key",
     "join-a-community": "or join a community",
+
     "http-gateway-error": "Oops, request failed!",
     "sign-request-failed": "Could not sign message",
     "invite-friends": "Invite friends",
@@ -767,9 +793,12 @@
     "keycard-is-blocked-title": "Keycard is blocked",
     "keycard-is-blocked-details": "You can no longer use this card to access or sign for this account. There have been too many failed passcode and PUK attempts.",
 
+
     "keycard-is-blocked-instructions": "To access your account reinstall Movement and use a new Keycard, use a different wallet or reset Keycard manually.",
 
     "keycard-is-blocked-instructions": "To access your account you will need to factory reset your card. Tap the button below to start the procedure, you will need your mnemonic.",
+
+    "keycard-is-blocked-instructions": "To access your account reinstall Movement and use a new Keycard, use a different wallet or reset Keycard manually.",
 
     "language": "Language",
     "learn-more": "Learn more",
@@ -795,6 +824,7 @@
     "logout-title": "Log out?",
     "looking-for-cards": "Looking for cards...",
     "lost-connection": "Lost connection",
+
     "mailserver-address": "InterX address",
     "mailserver-automatic": "Automatic selection",
     "mailserver-automatic-switch-explanation": "Choose the fastest InterX available",
@@ -808,6 +838,21 @@
     "mailserver-request-error-content": "The following error was returned by the InterX: {{error}}",
     "mailserver-request-error-status": "An error occured while fetching history, check the logs for details",
     "mailserver-request-error-title": "InterX request error",
+
+    "mailserver-address": "MovementX address",
+    "mailserver-automatic": "Automatic selection",
+    "mailserver-automatic-switch-explanation": "Choose the fastest MovementX available",
+    "mailserver-connection-error": "Could not connect to MovementX",
+    "mailserver-details": "MovementX details",
+    "mailserver-error-content": "The MovementX you selected couldn't be reached.",
+    "mailserver-error-title": "Error connecting to MovementX",
+    "mailserver-format": "enode://{enode-id}:{password}@{ip-address}:{port}",
+    "mailserver-pick-another": "Pick another MovementX",
+    "mailserver-reconnect": "Could not connect to MovementX. Tap to reconnect",
+    "mailserver-request-error-content": "The following error was returned by the MovementX: {{error}}",
+    "mailserver-request-error-status": "An error occured while fetching history, check the logs for details",
+    "mailserver-request-error-title": "MovementX request error",
+
     "mailserver-request-retry": "Retry request",
     "mailserver-retry": "Retry",
     "main-currency": "Main currency",
@@ -874,8 +919,13 @@
     "ens-name-title": "ENS Name",
 
     "ens-name-content": "Custom alias for your chat key that you can register using the Ethereum Name Service. ENS names are decentralized usernames.",
+
     "mailserver-title": "InterX",
     "mailserver-content": "A node in the InterX network that routes and stores messages, for up to 7 days.",
+
+    "mailserver-title": "MovementX",
+    "mailserver-content": "A node in the MovementX network that routes and stores messages, for up to 7 days.",
+
 
     "peer-title": "Peer",
     "peer-content": "A device connected to the Movement chat network. Each user can represent one or more peers, depending on their number of devices.",
@@ -908,7 +958,9 @@
     "new-network": "New network",
     "new-pin-description": "Enter new 6-digit passcode",
     "new-public-group-chat": "Start public house",
+
     "new-puk-description": "Enter new 12-digit PUK",
+
     "next": "Next",
     "no": "No",
     "no-collectibles": "No collectibles available",
@@ -949,8 +1001,13 @@
     "notify": "Notify",
     "off": "Off",
     "offline": "Offline",
+
     "offline-messaging-use-history-nodes": "Use InterX",
     "offline-messaging-use-history-explanation": "Enable InterX to fetch messages that were sent while the app was closed. When enabled, a InterX gets your IP address. When disabled you will not receive messages when the app is closed and will not see them when you open the app later.",
+
+    "offline-messaging-use-history-nodes": "Use MovementX",
+    "offline-messaging-use-history-explanation": "Enable MovementX to fetch messages that were sent while the app was closed. When enabled, a MovementX gets your IP address. When disabled you will not receive messages when the app is closed and will not see them when you open the app later.",
+
     "ok": "OK",
     "ok-continue": "Okay, continue",
     "ok-got-it": "Okay, got it",
@@ -1352,12 +1409,21 @@
     "request-feature": "Request a feature",
     "select-account-dapp": "Select the account you wish to use with Dapps",
     "apply": "Apply",
+
     "on-status-tree": "On InterX tree",
     "off-status-tree": "Off InterX tree",
     "derivation-path": "Derivation path",
     "storage": "Storage",
     "keycard-free-pairing-slots": "Keycard has {{n}} free pairing slots",
     "public-chat-description": "Find your interest topics! 🎭 \nAnyone can start a new one.",
+
+    "on-status-tree": "On Movement tree",
+    "off-status-tree": "Off Movement tree",
+    "derivation-path": "Derivation path",
+    "storage": "Storage",
+    "keycard-free-pairing-slots": "Keycard has {{n}} free pairing slots",
+    "public-chat-description": "Join or create public house for your interests! Anyone can start a new one.",
+
     "delete-account": "Delete account",
     "delete-keys-keycard": "Delete keys from Keycard",
     "watch-only": "Watch-only",
@@ -1517,6 +1583,7 @@
     "not-connected-to-peers": "Not connected to any peers",
     "unable-to-send-messages": "Unable to send and receive messages",
     "can-send-messages": "You can send and receive new messages",
+
     "not-connected-nodes": "Not connected to a InterX",
     "unable-to-fetch": "Unable to fetch chat history",
     "nodes-disabled": "InterX disabled",
@@ -1657,6 +1724,16 @@
     "suggested-price-limit": "Suggested price limit",
     "include": "Include",
     "category": "Category",
-    "edit-chats": "Edit chats"
+    "edit-chats": "Edit chats",
+
+
+    "not-connected-nodes": "Not connected to a MovementX",
+    "unable-to-fetch": "Unable to fetch chat history",
+    "nodes-disabled": "MovementX disabled",
+    "waiting-wi-fi": "Waiting for Wi-Fi…",
+    "you-can-fetch": "You can fetch chat history",
+    "youre-on-mobile-network": "You’re on mobile network",
+    "status-mobile-descr": "Movement tends to use a lot of data when syncing chats. You can choose not to sync when on mobile network",
+    "restore-defaults": "Restore Defaults",
 
 }

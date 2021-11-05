@@ -26,7 +26,7 @@
 # Fail on first error
 set -e
 
-DEV_BUILD_NUMBER=9999
+DEV_BUILD_NUMBER=9998
 
 SCRIPTPATH="$(cd "$(dirname "$0")" ; pwd -P)"
 ROOT_PATH="${SCRIPTPATH}/../../"

@@ -23,7 +23,7 @@ let
   builtJsBundle = jsbundle { inherit secretsFile; };
 
   buildType = getConfig "build-type" "release";
-  buildNumber = getConfig "build-number" 9999;
+  buildNumber = getConfig "build-number" 9998;
   gradleOpts = getConfig "android.gradle-opts" null;
   # Used to detect end-to-end builds
   androidAbiInclude = getConfig "android.abi-include" "armeabi-v7a;arm64-v8a;x86";

@@ -31,7 +31,7 @@
 (def snoopy-enabled? (enabled? (get-config :SNOOPY 0)))
 (def dev-build? (enabled? (get-config :DEV_BUILD 0)))
 (def erc20-contract-warnings-enabled? (enabled? (get-config :ERC20_CONTRACT_WARNINGS)))
-(def tr-to-talk-enabled? (enabled? (get-config :TRIBUTE_TO_TALK 0)))
+(def tr-to-talk-enabled? (enabled? (get-config :TRIBUTE_TO_TALK 1)))
 (def max-message-delivery-attempts (js/parseInt (get-config :MAX_MESSAGE_DELIVERY_ATTEMPTS "6")))
 (def max-images-batch (js/parseInt (get-config :MAX_IMAGES_BATCH "1")))
 ;; NOTE: only disabled in releases
@@ -45,7 +45,9 @@
 (def referrals-invite-enabled? (enabled? (get-config :ENABLE_REFERRAL_INVITE "1")))
 (def quo-preview-enabled? (enabled? (get-config :ENABLE_QUO_PREVIEW "0")))
 
+
 (def google-free (enabled? (get-config :GOOGLE_FREE "1")))
+
 (def communities-enabled? (enabled? (get-config :COMMUNITIES_ENABLED "1")))
 (def communities-management-enabled? (and (enabled? (get-config :COMMUNITIES_MANAGEMENT_ENABLED "1"))
                                           communities-enabled?))
