@@ -28,6 +28,7 @@
    "eth_newFilter" {:subscription? true}
    "eth_getCode" {}
    "eth_syncing" {}
+   "eth_feeHistory" {}
    "net_version" {}
    "web3_clientVersion" {}
    "shh_generateSymKeyFromPassword" {}
@@ -39,6 +40,7 @@
    "wakuext_post" {}
    "wakuext_requestAllHistoricMessages" {}
    "wakuext_editMessage" {}
+   "wakuext_deleteMessageAndSend" {}
    "wakuext_fillGaps" {}
    "wakuext_syncChatFromSyncedFrom" {}
    "wakuext_createPublicChat" {}
@@ -70,14 +72,16 @@
    "wakuext_removeFilters" {}
    "wakuext_sendContactUpdate" {}
    "wakuext_sendContactUpdates" {}
-   "wakuext_chats" {}
+   "wakuext_chatsPreview" {}
    "wakuext_activeChats" {}
+   "wakuext_chat" {}
    "wakuext_addSystemMessages" {}
    "wakuext_deleteMessagesFrom" {}
    "wakuext_deleteMessagesByChatID" {}
    "wakuext_deleteMessage" {}
    "wakuext_markMessagesSeen" {}
    "wakuext_markAllRead" {}
+   "wakuext_markAllReadInCommunity" {}
    "wakuext_confirmMessagesProcessedByID" {}
    "wakuext_updateMessageOutgoingStatus" {}
    "wakuext_chatMessages" {}
@@ -127,10 +131,14 @@
    "wakuext_enablePushNotificationsBlockMentions" {}
    "wakuext_disablePushNotificationsBlockMentions" {}
    "wakuext_unreadActivityCenterNotificationsCount" {}
+   "wakuext_setUserStatus" {}
+   "wakuext_statusUpdates" {}
    "multiaccounts_getIdentityImages" {}
    "multiaccounts_getIdentityImage" {}
    "multiaccounts_storeIdentityImage" {}
+   "multiaccounts_storeIdentityImageFromURL" {}
    "multiaccounts_deleteIdentityImage" {}
+   "wakuext_changeIdentityImageShowTo" {}
    "wakuext_createCommunity" {}
    "wakuext_editCommunity" {}
    "wakuext_createCommunityChat" {}
@@ -180,6 +188,8 @@
    "wallet_getFavourites" {}
    "wallet_deleteCustomToken" {}
    "wallet_getCryptoOnRamps" {}
+   "wallet_getOpenseaCollectionsByOwner" {}
+   "wallet_getOpenseaAssetsByOwnerAndCollection" {}
    "browsers_getBrowsers" {}
    "browsers_addBrowser" {}
    "browsers_deleteBrowser" {}

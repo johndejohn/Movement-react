@@ -1,5 +1,5 @@
 (ns status-im.ui.screens.home.styles
-  (:require [status-im.ui.components.colors :as colors]))
+  (:require [quo.design-system.colors :as colors]))
 
 (def last-message-text
   {:flex        1
@@ -36,6 +36,7 @@
 
 (def no-chats-text
   {:margin-top        50
+   :margin-bottom     8
    :margin-horizontal 16
    :line-height       22
    :text-align        :center})

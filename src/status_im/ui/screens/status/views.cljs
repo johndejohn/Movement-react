@@ -1,7 +1,7 @@
 (ns status-im.ui.screens.status.views
   (:require [status-im.ui.screens.chat.message.message :as message]
             [status-im.ui.components.react :as react]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.utils.datetime :as datetime]
             [status-im.ui.screens.chat.message.gap :as gap]
             [status-im.constants :as constants]
@@ -78,7 +78,8 @@
 (defn on-long-press-fn [on-long-press content image]
   (on-long-press
    (when-not image
-     [{:on-press #(react/copy-to-clipboard
+     [{:id       :copy
+       :on-press #(react/copy-to-clipboard
                    (components.reply/get-quoted-text-with-mentions
                     (get content :parsed-text)))
        :label    (i18n/label :t/sharing-copy-to-clipboard)}])))
@@ -87,9 +88,9 @@
   (let [visible (reagent/atom false)]
     (fn [{:keys [content] :as message} on-long-press]
       [:<>
-       [preview/preview-image {:message   (assoc message :cant-be-replied false)
+       [preview/preview-image {:message   (assoc message :cant-be-replied true)
                                :visible   @visible
-                               :can-reply true
+                               :can-reply false
                                :on-close  #(do (reset! visible false)
                                                (reagent/flush))}]
        [react/touchable-highlight {:on-press (fn [_]

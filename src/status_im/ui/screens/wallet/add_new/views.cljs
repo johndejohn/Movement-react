@@ -4,7 +4,7 @@
             [status-im.ui.screens.keycard.pin.views :as pin.views]
             [status-im.i18n.i18n :as i18n]
             [re-frame.core :as re-frame]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [reagent.core :as reagent]
             [cljs.spec.alpha :as spec]
             [status-im.multiaccounts.db :as multiaccounts.db]
@@ -87,7 +87,7 @@
         :auto-focus          false
         :placeholder         (i18n/label :t/multiaccounts-recover-enter-phrase-title)
         :auto-correct        false
-        :keyboard-type       "visible-password"
+        :keyboard-type       :visible-password
         :multiline           true
         :height              95
         :error               account-error
@@ -104,7 +104,7 @@
         :auto-focus          false
         :placeholder         (i18n/label :t/enter-a-private-key)
         :auto-correct        false
-        :keyboard-type       "visible-password"
+        :keyboard-type       :visible-password
         :error               account-error
         :secure-text-entry   true
         :accessibility-label :add-account-enter-private-key

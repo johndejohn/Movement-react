@@ -108,14 +108,7 @@
                         :title      (i18n/label :t/new-group-chat)
                         :subtitle   (i18n/label :t/group-chat-members-count
                                                 {:selected (inc (count contacts))
-                                                 :max1     constants/max-1-group-chat-participants
-                                                 :max2     constants/max-2-group-chat-participants
-                                                 :max3     constants/max-3-group-chat-participants
-                                                 :max4     constants/max-4-group-chat-participants
-                                                 :max5     constants/max-5-group-chat-participants
                                                  :max      constants/max-group-chat-participants})}]
-
-
         [react/view {:style {:padding-top 16
                              :flex        1}}
          [react/view {:style {:padding-horizontal 16}}
@@ -177,11 +170,6 @@
                      :title         (i18n/label :t/new-group-chat)
                      :subtitle      (i18n/label :t/group-chat-members-count
                                                 {:selected (inc selected-contacts-count)
-                                                	:max1     constants/max-1-group-chat-participants
-                                                 :max2     constants/max-2-group-chat-participants
-                                                 :max3     constants/max-3-group-chat-participants
-                                                 :max4     constants/max-4-group-chat-participants
-                                                 :max5     constants/max-5-group-chat-participants
                                                  :max      constants/max-group-chat-participants})}]
      [searchable-contact-list
       {:contacts          contacts
@@ -210,11 +198,6 @@
                        :title         (i18n/label :t/add-members)
                        :subtitle      (i18n/label :t/group-chat-members-count
                                                   {:selected (+ current-participants-count selected-contacts-count)
-                                                  	:max1     constants/max-1-group-chat-participants
-                                                   :max2     constants/max-2-group-chat-participants
-                                                   :max3     constants/max-3-group-chat-participants
-                                                   :max4     constants/max-4-group-chat-participants
-                                                   :max5     constants/max-5-group-chat-participants
                                                    :max      constants/max-group-chat-participants})}]
        [searchable-contact-list
         {:contacts          contacts

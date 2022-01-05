@@ -27,9 +27,12 @@
              :chat/cooldown-enabled?             false
              :chat/last-outgoing-message-sent-at 0
              :chat/spam-messages-frequency       0
+             :chats-home-list                    #{}
+             :home-items-show-number             20
              :tooltips                           {}
              :dimensions/window                  (dimensions/window)
              :registry                           {}
+             :visibility-status-updates          {}
              :stickers/packs-owned               #{}
              :stickers/packs-pending             #{}
              :keycard                            {:nfc-enabled?   false

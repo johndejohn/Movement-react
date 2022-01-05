@@ -15,7 +15,8 @@
             [status-im.utils.datetime :as datetime]
             [status-im.utils.fx :as fx]
             [status-im.utils.money :as money]
-            [status-im.utils.random :as random]))
+            [status-im.utils.random :as random]
+            [status-im.bottom-sheet.core :as bottom-sheet]))
 
 (defn fullname [custom-domain? username]
   (if custom-domain?
@@ -76,15 +77,17 @@
 
 (fx/defn set-state
   {:events [::name-resolved]}
-  [{:keys [db]} username state]
+  [{:keys [db]} username state address]
   (when (= username
            (get-in db [:ens/registration :username]))
-    {:db (assoc-in db [:ens/registration :state] state)}))
+    {:db (-> db
+             (assoc-in [:ens/registration :state] state)
+             (assoc-in [:ens/registration :address] address))}))
 
 (fx/defn on-resolver-found
   {:events [::resolver-found]}
-  [{:keys [db] :as cofx} resolver-contract]
-  (let [{:keys [state username custom-domain?]} (:ens/registration db)
+  [{:keys [db] :as cofx} resolver-contract address]
+  (let [{:keys [username custom-domain?]} (:ens/registration db)
         {:keys [public-key]} (:multiaccount db)
         {:keys [x y]} (ethereum/coordinates public-key)
         namehash (ens/namehash (str username (when-not custom-domain?
@@ -92,6 +95,7 @@
     (signing/eth-transaction-call
      cofx
      {:contract   resolver-contract
+      :from       address
       :method     "setPubkey(bytes32,bytes32,bytes32)"
       :params     [namehash x y]
       :on-result  [::save-username custom-domain? username true]
@@ -115,7 +119,7 @@
 (fx/defn on-input-submitted
   {:events [::input-submitted ::input-icon-pressed]}
   [{:keys [db] :as cofx}]
-  (let [{:keys [state username custom-domain?]} (:ens/registration db)
+  (let [{:keys [state username custom-domain? address]} (:ens/registration db)
         registry-contract (get ens/ens-registries (ethereum/chain-keyword db))
         ens-name (str username (when-not custom-domain?
                                  ".stateofus.eth"))]
@@ -124,14 +128,14 @@
       (navigation/navigate-to-cofx cofx :ens-checkout {})
       :connected-with-different-key
       (ens/resolver registry-contract ens-name
-                    #(re-frame/dispatch [::resolver-found %]))
+                    #(re-frame/dispatch [::resolver-found % address]))
       :connected
       (save-username cofx custom-domain? username true)
       ;; for other states, we do nothing
       nil)))
 
 (defn- on-resolve-owner
-  [registry custom-domain? username address public-key response resolve-last-id* resolve-last-id]
+  [registry custom-domain? username addresses public-key response resolve-last-id* resolve-last-id]
   (when (= @resolve-last-id* resolve-last-id)
     (cond
 
@@ -141,14 +145,14 @@
 
       ;; if we get an address back, we try to get the public key associated
       ;; with the username as well
-      (= (eip55/address->checksum address)
-         (eip55/address->checksum response))
+      (get addresses (eip55/address->checksum response))
       (resolver/pubkey registry (fullname custom-domain? username)
                        #(re-frame/dispatch [::name-resolved username
                                             (cond
                                               (not public-key) :owned
                                               (= % public-key) :connected
-                                              :else :connected-with-different-key)]))
+                                              :else :connected-with-different-key)
+                                            (eip55/address->checksum response)]))
 
       :else
       (re-frame/dispatch [::name-resolved username :taken]))))
@@ -162,10 +166,9 @@
 (fx/defn register-name
   {:events [::register-name-pressed]}
   [{:keys [db] :as cofx}]
-  (let [{:keys [custom-domain? username]}
+  (let [{:keys [custom-domain? username address]}
         (:ens/registration db)
         {:keys [public-key]} (:multiaccount db)
-        address (ethereum/default-address db)
         chain (ethereum/chain-keyword db)
         chain-id (ethereum/chain-id db)
         amount (registration-cost chain-id)
@@ -177,6 +180,7 @@
         cofx
         {:contract   (contracts/get-address db :status/snt)
          :method     "approveAndCall(address,uint256,bytes)"
+         :from       address
          :params     [contract
                       (money/unit->token amount 18)
                       (abi-spec/encode "register(bytes32,address,bytes32,bytes32)"
@@ -220,12 +224,12 @@
      (when (= state :searching)
        (let [{:keys [multiaccount]} db
              {:keys [public-key]} multiaccount
-             address (ethereum/default-address db)
+             addresses (ethereum/addresses-without-watch db)
              registry (get ens/ens-registries (ethereum/chain-keyword db))]
          {::resolve-owner [registry
                            (fullname custom-domain? username)
                            #(on-resolve-owner
-                             registry custom-domain? username address public-key %
+                             registry custom-domain? username addresses public-key %
                              resolve-last-id @resolve-last-id)]})))))
 
 (fx/defn return-to-ens-main-screen
@@ -246,6 +250,13 @@
             {:db (-> db
                      (update :ens/registration dissoc :username :state)
                      (update-in [:ens/registration :custom-domain?] not))}))
+
+(fx/defn change-address
+  {:events [::change-address]}
+  [{:keys [db] :as cofx} _ {:keys [address]}]
+  (fx/merge cofx
+            {:db (assoc-in db [:ens/registration :address] address)}
+            (bottom-sheet/hide-bottom-sheet)))
 
 (fx/defn save-preferred-name
   {:events [::save-preferred-name]}

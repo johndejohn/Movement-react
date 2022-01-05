@@ -8,7 +8,7 @@
             [status-im.ui.components.react :as react]
             [status-im.utils.security :as security]
             [status-im.i18n.i18n :as i18n]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.toolbar :as toolbar]
             [quo.core :as quo]
             [status-im.ui.screens.multiaccounts.sheets :as sheets]
@@ -20,10 +20,10 @@
                                [:multiaccounts.login.ui/multiaccount-selected key-uid])
                   :icon      [photos/photo (multiaccounts/displayed-photo account) {:size styles/multiaccount-image-size}]
                   :title     name
+                  :accessory-style (when keycard-pairing {:flex-basis 100})
                   :accessory (when keycard-pairing
                                [react/view {:justify-content  :center
                                             :align-items      :center
-                                            :margin-right     7
                                             :width            32
                                             :height           32
                                             :border-radius    24
@@ -64,6 +64,7 @@
    [quo/text-input
     {:show-cancel         false
      :auto-correct        false
+     :keyboard-type       :visible-password
      :placeholder         (i18n/label :t/seed-phrase-placeholder)
      :monospace           true
      :multiline           true

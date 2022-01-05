@@ -39,10 +39,10 @@
 
 (defn greater-than
   [bn1 bn2]
-  (.greaterThan bn1 bn2))
+  (.greaterThan ^js bn1 bn2))
 
 (defn sub [bn1 bn2]
-  (.sub bn1 bn2))
+  (.sub ^js bn1 bn2))
 
 (defn valid? [^js bn]
   (when bn
@@ -103,6 +103,9 @@
 (defn wei->ether [n]
   (wei-> :eth n))
 
+(defn wei->gwei [n]
+  (wei-> :gwei n))
+
 (defn ether->wei [^js bn]
   (when bn
     (.times bn ^js (bignumber 1e18))))
@@ -130,12 +133,12 @@
 ;; to get the amount scale right.
 
 (defn formatted->internal [n symbol decimals]
-  (if (= :INT symbol)
+  (if (= :ETH symbol)
     (ether->wei n)
     (unit->token n decimals)))
 
 (defn internal->formatted [n symbol decimals]
-  (if (= :INT symbol)
+  (if (= :ETH symbol)
     (wei->ether n)
     (token->unit n decimals)))
 
@@ -171,7 +174,16 @@
       str))
 
 (defn add [bn1 n2]
-  (.add bn1 n2))
+  (.add ^js bn1 n2))
 
 (defn mul [bn1 bn2]
-  (.mul bn1 bn2))
+  (.mul ^js bn1 bn2))
+
+(defn mul-and-round [bn1 bn2]
+  (.round (.mul ^js bn1 bn2) 0))
+
+(defn div [bn1 bn2]
+  (.dividedBy ^js bn1 bn2))
+
+(defn div-and-round [bn1 bn2]
+  (.round (.dividedBy ^js bn1 bn2) 0))

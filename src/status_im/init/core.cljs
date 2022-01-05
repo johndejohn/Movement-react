@@ -14,15 +14,16 @@
 
 (fx/defn initialize-app-db
   "Initialize db to initial state"
-  [{{:keys [keycard supported-biometric-auth app-active-since]
+  [{{:keys [keycard supported-biometric-auth app-active-since goto-key-storage?]
      :network/keys [type] :keycard/keys [banner-hidden]} :db
     now :now}]
   {:db (assoc app-db
               :network/type type
               :keycard/banner-hidden banner-hidden
-              :keycard (dissoc keycard :secrets)
+              :keycard (dissoc keycard :secrets :pin :application-info)
               :supported-biometric-auth supported-biometric-auth
               :app-active-since (or app-active-since now)
+              :goto-key-storage? goto-key-storage?
               :multiaccounts/loading true)})
 
 (fx/defn initialize-views

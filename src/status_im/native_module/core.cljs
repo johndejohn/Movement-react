@@ -66,12 +66,12 @@
 
 (defn export-db
   "NOTE: beware, the password has to be sha3 hashed"
-  [key-uid account-data hashed-password]
+  [key-uid account-data hashed-password callback]
   (log/debug "[native-module] export-db")
   (clear-web-data)
   (init-keystore
    key-uid
-   #(.exportUnencryptedDatabase ^js (status) account-data hashed-password)))
+   #(.exportUnencryptedDatabase ^js (status) account-data hashed-password callback)))
 
 (defn import-db
   "NOTE: beware, the password has to be sha3 hashed"
@@ -399,6 +399,12 @@
   [key-uid callback]
   (log/debug "[native-module] delete-multiaccount")
   (.deleteMultiaccount ^js (status) key-uid callback))
+
+(defn delete-imported-key
+  "Delete imported key file."
+  [key-uid address hashed-password callback]
+  (log/debug "[native-module] delete-imported-key")
+  (.deleteImportedKey ^js (status) key-uid address hashed-password callback))
 
 (defn activate-keep-awake []
   (log/debug "[native-module] activateKeepAwake")

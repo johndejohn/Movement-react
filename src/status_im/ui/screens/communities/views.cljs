@@ -9,10 +9,10 @@
    [status-im.ui.components.list.views :as list]
    [status-im.ui.components.copyable-text :as copyable-text]
    [status-im.ui.components.topbar :as topbar]
-   [status-im.ui.components.colors :as colors]
    [status-im.ui.components.toolbar :as toolbar]
    [status-im.ui.components.badge :as badge]
    [status-im.ui.components.react :as react]
+   [status-im.ui.screens.communities.community :as community]
    [status-im.ui.screens.communities.icon :as communities.icon]
    [quo.design-system.colors :as quo.colors]))
 
@@ -27,7 +27,7 @@
       [badge/message-counter unviewed-mentions-count]
 
       (pos? unviewed-messages-count)
-      [react/view {:style               {:background-color colors/blue
+      [react/view {:style               {:background-color quo.colors/blue
                                          :border-radius    6
                                          :margin-right     5
                                          :margin-top       2
@@ -36,13 +36,17 @@
                    :accessibility-label :unviewed-messages-public}])))
 
 (defn community-home-list-item [{:keys [id name last?] :as community}]
-  [react/touchable-opacity {:style    (merge {:height 64}
-                                             (when last?
-                                               {:border-bottom-color (quo.colors/get-color :ui-01)
-                                                :border-bottom-width 1}))
-                            :on-press (fn []
-                                        (>evt [:dismiss-keyboard])
-                                        (>evt [:navigate-to :community {:community-id id}]))}
+  [react/touchable-opacity {:style         (merge {:height 64}
+                                                  (when last?
+                                                    {:border-bottom-color (quo.colors/get-color :ui-01)
+                                                     :border-bottom-width 1}))
+                            :on-press      (fn []
+                                             (>evt [::communities/load-category-states id])
+                                             (>evt [:dismiss-keyboard])
+                                             (>evt [:navigate-to :community {:community-id id}]))
+                            :on-long-press #(>evt [:bottom-sheet/show-sheet
+                                                   {:content (fn []
+                                                               [community/community-actions community])}])}
    [:<>
     [react/view {:top 12 :left 16 :position :absolute}
      [communities.icon/community-icon community]]
@@ -157,12 +161,11 @@
        community-key]]]))
 
 (defn render-featured-community [{:keys [name id]}]
-  ^{:key id}
   [react/touchable-highlight {:on-press            #(>evt [:navigate-to :community {:community-id id}])
                               :accessibility-label :chat-item}
    [react/view {:padding-right    8
                 :padding-vertical 8}
-    [react/view {:border-color       colors/gray-lighter
+    [react/view {:border-color       quo.colors/gray-lighter
                  :border-radius      36
                  :border-width       1
                  :padding-horizontal 8

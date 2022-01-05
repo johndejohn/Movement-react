@@ -4,23 +4,19 @@
             [status-im.ethereum.core :as ethereum]
             [status-im.i18n.i18n :as i18n]
             [status-im.ui.components.animation :as animation]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.icons.icons :as icons]
             [quo.core :as quo]
-            [status-im.ui.components.list.views :as list]
             [status-im.ui.components.react :as react]
             [status-im.ui.components.topbar :as topbar]
+            [status-im.utils.config :as config]
             [status-im.ui.screens.wallet.account.styles :as styles]
             [status-im.ui.screens.wallet.accounts.sheets :as sheets]
             [status-im.ui.screens.wallet.accounts.views :as accounts]
             [status-im.ui.screens.wallet.buy-crypto.views :as buy-crypto]
             [status-im.ui.screens.wallet.transactions.views :as history]
-            [status-im.utils.money :as money]
-            [status-im.wallet.utils :as wallet.utils]
             [status-im.ui.components.tabs :as tabs]
-            [quo.react-native :as rn]
-            [quo.design-system.colors :as quo-colors]
-            [status-im.utils.utils :as utils.utils])
+            [status-im.ui.screens.wallet.collectibles.views :as collectibles.views])
   (:require-macros [status-im.utils.views :as views]))
 
 (def state (reagent/atom {:tab :assets}))
@@ -58,8 +54,11 @@
       [react/touchable-highlight {:on-press #(re-frame/dispatch [:wallet/share-popover address])}
        [icons/icon :main-icons/share {:color                      colors/white-persist
                                       :accessibility-label :share-wallet-address-icon}]]]
-     [react/view {:height                     button-group-height :background-color          colors/black-transparent-20
-                  :border-bottom-right-radius 8                   :border-bottom-left-radius 8 :flex-direction :row}
+     [react/view {:height                     button-group-height
+                  :background-color           colors/black-transparent-20
+                  :border-bottom-right-radius 8
+                  :border-bottom-left-radius  8
+                  :flex-direction             :row}
       (if (= type :watch)
         [react/view {:flex 1 :align-items :center :justify-content :center}
          [react/text {:style {:margin-left 8 :color colors/white-persist}}
@@ -76,22 +75,13 @@
        colors/white-persist
        #(re-frame/dispatch [:wallet/share-popover address])]]]))
 
-(defn render-collectible [{:keys [name icon amount] :as collectible}]
-  (let [items-number (money/to-fixed amount)]
-    [quo/list-item
-     {:title          (wallet.utils/display-symbol collectible)
-      :subtitle       name
-      :icon           [list/item-image icon]
-      :accessory      :text
-      :accessory-text items-number}]))
-
 (views/defview transactions [address]
   (views/letsubs [data [:wallet.transactions.history/screen address]]
     [history/history-list data address]))
 
-(defn collectibles-link []
+(defn opensea-link [address]
   [react/touchable-highlight
-   {:on-press #(re-frame/dispatch [:browser.ui/open-url "https://opensea.io/account/"])}
+   {:on-press #(re-frame/dispatch [:browser.ui/open-url (str "https://opensea.io/" address)])}
    [react/view
     {:style {:flex             1
              :padding-horizontal 14
@@ -108,8 +98,10 @@
      (i18n/label :t/check-on-opensea)]]])
 
 (views/defview assets-and-collections [address]
-  (views/letsubs [{:keys [tokens nfts]} [:wallet/visible-assets-with-values address]
-                  currency [:wallet/currency]]
+  (views/letsubs [{:keys [tokens]} [:wallet/visible-assets-with-values address]
+                  currency [:wallet/currency]
+                  opensea-enabled? [:opensea-enabled?]
+                  collectible-collection [:wallet/collectible-collection address]]
     (let [{:keys [tab]} @state]
       [react/view {:flex 1}
        [react/view {:flex-direction :row :margin-bottom 8 :padding-horizontal 4}
@@ -124,16 +116,21 @@
             ^{:key (:name item)}
             [accounts/render-asset item nil nil (:code currency)])]
          (= tab :nft)
-         [react/view
-          [collectibles-link]
-          (if (seq nfts)
-            [:<>
-             (for [item nfts]
-               ^{:key (:name item)}
-               [render-collectible item nil nil (:code currency)])]
-            [react/view {:align-items :center :margin-top 32}
-             [react/text {:style {:color colors/gray}}
-              (i18n/label :t/no-collectibles)]])]
+         [:<>
+          [opensea-link address]
+          ;; Hide collectibles behind a feature flag
+          (when config/collectibles-enabled?
+            (cond
+              (not opensea-enabled?)
+              [collectibles.views/enable-opensea-view]
+
+              (and opensea-enabled? (seq collectible-collection))
+              [collectibles.views/nft-collections address]
+
+              :else
+              [react/view {:align-items :center :margin-top 32}
+               [react/text {:style {:color colors/gray}}
+                (i18n/label :t/no-collectibles)]]))]
          (= tab :history)
          [transactions address])])))
 
@@ -180,29 +177,6 @@
             (styles/bottom-send-recv-buttons-lower anim-y button-group-height)
             #(reset! to-show false))))))))
 
-;; Note(rasom): sometimes `refreshing` might get stuck on iOS if action happened
-;; too fast. By updating this atom in 1s we ensure that `refreshing?` property
-;; is updated properly in this case.
-(def updates-counter (reagent/atom 0))
-
-(defn schedule-counter-reset []
-  (utils.utils/set-timeout
-   (fn []
-     (swap! updates-counter inc)
-     (when @(re-frame/subscribe [:wallet/refreshing-history?])
-       (schedule-counter-reset)))
-   1000))
-
-(defn refresh-action []
-  (schedule-counter-reset)
-  (re-frame/dispatch [:wallet.ui/pull-to-refresh-history]))
-
-(defn refresh-control [refreshing?]
-  (reagent/as-element
-   [rn/refresh-control
-    {:refreshing (boolean refreshing?)
-     :onRefresh  refresh-action}]))
-
 (views/defview account []
   (views/letsubs [{:keys [name address] :as account} [:multiaccount/current-account]
                   fetching-error [:wallet/fetching-error]]
@@ -223,9 +197,9 @@
                                  [{:nativeEvent {:contentOffset {:y scroll-y}}}]
                                  {:useNativeDriver true})
          :scrollEventThrottle   1
-         :refreshControl        (refresh-control
+         :refreshControl        (accounts/refresh-control
                                  (and
-                                  @updates-counter
+                                  @accounts/updates-counter
                                   @(re-frame/subscribe [:wallet/refreshing-history?])))}
         (when fetching-error
           [react/view {:style {:flex 1
@@ -234,7 +208,7 @@
            [icons/icon
             :main-icons/warning
             {:color           :red
-             :container-style {:background-color (quo-colors/get-color :negative-02)
+             :container-style {:background-color (colors/get-color :negative-02)
                                :height           40
                                :width            40
                                :border-radius    20

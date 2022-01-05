@@ -8,7 +8,8 @@
             [status-im.utils.fx :as fx]
             [taoensso.timbre :as log]
             [clojure.string :as string]
-            [status-im.constants :as constants]))
+            [status-im.constants :as constants]
+            [status-im.contact.block :as contact.block]))
 
 (fx/defn load-contacts
   {:events [::contacts-loaded]}
@@ -37,18 +38,38 @@
      :address       address}))
 
 (fx/defn ensure-contacts
-  [{:keys [db]} contacts]
-  {:db (update db :contacts/contacts
-               #(reduce (fn [acc {:keys [public-key] :as contact}]
-                          (-> acc
-                              (update public-key merge contact)
-                              (assoc-in [public-key :nickname] (:nickname contact))))
-                        %
-                        contacts))
-   :dispatch-n (map (fn [{:keys [public-key] :as contact}]
-                      (when (contact.db/added? contact)
-                        [:start-profile-chat public-key]))
-                    contacts)})
+  [{:keys [db]} contacts chats]
+  (let [events
+        (reduce
+         (fn [acc {:keys [public-key] :as contact}]
+           (let [added (:added contact)
+                 was-added (contact.db/added? db public-key)
+                 blocked (:blocked contact)
+                 was-blocked (contact.db/blocked? db public-key)]
+             (cond-> acc
+               (and added (not was-added))
+               (conj [:start-profile-chat public-key])
+
+               (and was-added (not added))
+               (conj nil)
+
+               (and blocked (not was-blocked))
+               (conj [::contact.block/contact-blocked contact chats])
+
+               (and was-blocked (not blocked))
+               (conj [::contact.block/contact-unblocked public-key]))))
+         [[:offload-messages constants/timeline-chat-id]]
+         contacts)]
+    (merge
+     {:db (update db :contacts/contacts
+                  #(reduce (fn [acc {:keys [public-key] :as contact}]
+                             (-> acc
+                                 (update public-key merge contact)
+                                 (assoc-in [public-key :nickname] (:nickname contact))))
+                           %
+                           contacts))}
+     (when (> (count events) 1)
+       {:dispatch-n events}))))
 
 (fx/defn upsert-contact
   [{:keys [db] :as cofx}
@@ -80,8 +101,7 @@
                     (and nickname (not (string/blank? nickname)))
                     (assoc :nickname nickname)
                     :else
-                    (update :system-tags
-                            (fnil #(conj % :contact/added) #{})))]
+                    (assoc :added true))]
       (fx/merge cofx
                 {:db (dissoc db :contacts/new-identity)
                  :dispatch-n [[:start-profile-chat public-key]
@@ -92,15 +112,12 @@
 (fx/defn remove-contact
   "Remove a contact from current account's contact list"
   {:events [:contact.ui/remove-contact-pressed]}
-  [{:keys [db] :as cofx} {:keys [public-key] :as contact}]
-  (let [new-contact (update contact
-                            :system-tags
-                            (fnil #(disj % :contact/added) #{}))]
-    {:db (assoc-in db [:contacts/contacts public-key] new-contact)
-     ::json-rpc/call [{:method "wakuext_removeContact"
-                       :params [public-key]
-                       :on-success #(log/debug "contact removed successfully")}]
-     :dispatch [:offload-messages constants/timeline-chat-id]}))
+  [{:keys [db]} {:keys [public-key]}]
+  {:db (assoc-in db [:contacts/contacts public-key :added] false)
+   ::json-rpc/call [{:method "wakuext_removeContact"
+                     :params [public-key]
+                     :on-success #(log/debug "contact removed successfully")}]
+   :dispatch [:offload-messages constants/timeline-chat-id]})
 
 (fx/defn create-contact
   "Create entry in contacts"

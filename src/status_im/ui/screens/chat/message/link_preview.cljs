@@ -86,9 +86,10 @@
                          (re-frame/dispatch
                           [:browser.ui/message-link-pressed link]))}
            [react/view (styles/link-preview-wrapper outgoing timeline)
-            [react/image {:source              {:uri thumbnailUrl}
-                          :style               (styles/link-preview-image outgoing (select-keys preview-data [:height :width]))
-                          :accessibility-label :member-photo}]
+            (when-not (string/blank? thumbnailUrl)
+              [react/image {:source              {:uri thumbnailUrl}
+                            :style               (styles/link-preview-image outgoing (select-keys preview-data [:height :width]))
+                            :accessibility-label :member-photo}])
             (when-not (is-gif? thumbnailUrl)
               [:<>
                [quo/text {:size  :small
@@ -123,7 +124,8 @@
      [quo/separator]
      [quo/button {:on-press #(re-frame/dispatch [:navigate-to
                                                  :community
-                                                 {:community-id (:id community)}])
+                                                 {:from-chat true
+                                                  :community-id (:id community)}])
                   :type     :secondary}
       (i18n/label :t/view)]]))
 

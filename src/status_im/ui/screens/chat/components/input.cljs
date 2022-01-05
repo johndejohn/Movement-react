@@ -342,7 +342,6 @@
                       :set-active          set-active-panel}])])
 
 (defn chat-toolbar []
-
   (let [actions-ref (quo.react/create-ref)
         send-ref (quo.react/create-ref)
         sticker-ref (quo.react/create-ref)
@@ -374,21 +373,6 @@
                                 (re-frame/dispatch [:chat.ui/send-current-message]))])]
 
            ;;STICKERS and AUDIO buttons
-           [rn/view {:style (merge {:flex-direction :row} (when show-send {:width 0 :right -100}))
-                     :ref   sticker-ref}
-            (when stickers
-              [touchable-stickers-icon {:panel               :stickers
-                                        :accessibility-label :show-stickers-icon
-                                        :active              active-panel
-                                        :input-focus         #(input-focus text-input-ref)
-                                        :set-active          set-active-panel}])
-            (when audio
-              [touchable-audio-icon {:panel               :audio
-                                     :accessibility-label :show-audio-message-icon
-                                     :active              active-panel
-                                     :input-focus         #(input-focus text-input-ref)
-                                     :set-active          set-active-panel}])]]]]))))
-
            (when-not @(re-frame/subscribe [:chats/edit-message])
              [rn/view {:style (merge {:flex-direction :row} (when show-send {:width 0 :right -100}))
                        :ref   sticker-ref}
@@ -403,72 +387,4 @@
                                        :accessibility-label :show-audio-message-icon
                                        :active              active-panel
                                        :input-focus         #(input-focus text-input-ref)
-                                       :set-active          set-active-panel}])])
-
-
-  (let [previous-layout          (atom nil)
-        had-reply                (atom nil)]
-    (fn [{:keys [active-panel set-active-panel text-input-ref on-text-change]}]
-      (let [disconnected?        @(re-frame/subscribe [:disconnected?])
-            {:keys [processing]} @(re-frame/subscribe [:multiaccounts/login])
-            mainnet?             @(re-frame/subscribe [:mainnet?])
-            input-text
-            @(re-frame/subscribe [:chats/current-chat-input-text])
-            input-with-mentions
-            @(re-frame/subscribe [:chat/input-with-mentions])
-            cooldown-enabled?    @(re-frame/subscribe [:chats/cooldown-enabled?])
-            one-to-one-chat?     @(re-frame/subscribe [:current-chat/one-to-one-chat?])
-            {:keys [public?
-                    chat-id]}    @(re-frame/subscribe [:current-chat/metadata])
-            reply                @(re-frame/subscribe [:chats/reply-message])
-            sending-image        @(re-frame/subscribe [:chats/sending-image])
-            input-focus          (fn []
-                                   (some-> ^js (react/current-ref text-input-ref) .focus))
-            clear-input          (fn []
-                                   (some-> ^js (react/current-ref text-input-ref) .clear))
-            empty-text           (string/blank? (string/trim (or input-text "")))
-            show-send            (and (or (not empty-text)
-                                          sending-image)
-                                      (not (or processing disconnected?)))
-            show-stickers        (and empty-text
-                                      mainnet?
-                                      (not sending-image)
-                                      (not reply))
-            show-image           (and empty-text
-                                      (not reply))
-                                      
-            show-extensions      (and empty-text
-            
-                                      (or config/commands-enabled? mainnet?)
-                                      (not reply))
-            show-audio           (and empty-text
-                                      (not sending-image)
-                                      (not reply))]
-                                      
-        (when-not (= reply @had-reply)
-          (reset! had-reply reply)
-          (when reply
-            (js/setTimeout input-focus 250)))
-        (when (and platform/ios? (not= @previous-layout [show-send show-stickers show-extensions show-audio]))
-          (reset! previous-layout [show-send show-stickers show-extensions show-audio])
-          (when (seq @previous-layout)
-            (rn/configure-next
-             (:ease-opacity-200 rn/custom-animations))))
-        [chat-input {:set-active-panel         set-active-panel
-                     :active-panel             active-panel
-                     :text-input-ref           text-input-ref
-                     :input-focus              input-focus
-                     :reply                    reply
-                     :on-send-press            #(do (re-frame/dispatch [:chat.ui/send-current-message])
-                                                    (clear-input))
-                     :text-value               input-text
-                     :input-with-mentions      input-with-mentions
-                     :on-text-change           on-text-change
-                     :cooldown-enabled?        cooldown-enabled?
-                     :show-send                show-send
-                     :show-stickers            show-stickers
-                     :show-image               show-image
-                     :show-audio               show-audio
-                     :sending-image            sending-image
-                     :show-extensions          show-extensions
-                     :chat-id                  chat-id}]))))
+                                       :set-active          set-active-panel}])])]]]))))

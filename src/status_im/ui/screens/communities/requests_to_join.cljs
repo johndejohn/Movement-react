@@ -3,7 +3,7 @@
             [quo.core :as quo]
             [reagent.core :as reagent]
             [re-frame.core :as re-frame]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.react :as react]
             [status-im.utils.handlers :refer [<sub >evt]]
             [status-im.ui.components.chat-icon.screen :as chat-icon]
@@ -26,7 +26,7 @@
    [react/touchable-highlight {:on-press #(re-frame/dispatch [:communities.ui/decline-request-to-join-pressed community-id request-id])}
     [icons/icon :main-icons/cancel {:width 35
                                     :height 35
-                                    :container-style {:padding-left 10}
+                                    :container-style {:margin-left 16}
                                     :color colors/red}]]])
 
 (defn render-request [{:keys [id public-key]} _ _ {:keys [community-id
@@ -36,7 +36,8 @@
     [quo/list-item
      {:title               (multiaccounts/displayed-name member)
       :accessibility-label :member-item
-
+      :accessory-style     (when can-manage-users?
+                             {:flex-basis 120})
       :accessory           (when can-manage-users?
                              [request-actions community-id id])
       :icon                [chat-icon/contact-icon-contacts-tab

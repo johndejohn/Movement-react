@@ -6,7 +6,7 @@
             [status-im.data-store.chats :as chats-store]
             [status-im.ethereum.json-rpc :as json-rpc]
             [status-im.i18n.i18n :as i18n]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.constants :as constants]
             [status-im.navigation :as navigation]
             [status-im.utils.clocks :as utils.clocks]
@@ -15,7 +15,8 @@
             [status-im.utils.types :as types]
             [status-im.add-new.db :as new-public-chat.db]
             [status-im.chat.models.loading :as loading]
-            [status-im.ui.screens.chat.state :as chat.state]))
+            [status-im.ui.screens.chat.state :as chat.state]
+            [clojure.set :as set]))
 
 (defn chats []
   (:chats (types/json->clj (js/require "./chats.js"))))
@@ -44,11 +45,9 @@
   ([cofx chat-id]
    (community-chat? (get-chat cofx chat-id))))
 
-(defn active-chat?
-  ([chat]
-   (:is-active chat))
-  ([cofx chat-id]
-   (active-chat? (get-chat cofx chat-id))))
+(defn active-chat? [cofx chat-id]
+  (let [chat (get-chat cofx chat-id)]
+    (not (nil? chat))))
 
 (defn foreground-chat?
   [{{:keys [current-chat-id view-id]} :db} chat-id]
@@ -87,21 +86,9 @@
      :color              (rand-nth colors/chat-colors)
      :chat-type          constants/one-to-one-chat-type
      :group-chat         false
-     :is-active          true
      :timestamp          now
      :contacts           #{chat-id}
      :last-clock-value   0}))
-
-(fx/defn ensure-chat
-  "Add chat to db and update"
-  [{:keys [db] :as cofx} {:keys [chat-id timeline?] :as chat-props}]
-  (let [chat (merge
-              (or (get (:chats db) chat-id)
-                  (create-new-chat chat-id cofx))
-              chat-props)
-        new? (not (get-in db [:chats chat-id]))
-        public? (public-chat? chat)]
-    {:db (update-in db [:chats chat-id] merge chat)}))
 
 (defn map-chats [{:keys [db] :as cofx}]
   (fn [val]
@@ -116,16 +103,37 @@
   (fn [val]
     (and (not (get-in db [:chats (:chat-id val)])) (:public? val))))
 
+(fx/defn leave-removed-chat
+  [{{:keys [view-id current-chat-id chats]} :db
+    :as cofx}]
+  (when (and (= view-id :chat)
+             (not (contains? chats current-chat-id)))
+    (navigation/navigate-back cofx)))
+
 (fx/defn ensure-chats
   "Add chats to db and update"
   [{:keys [db] :as cofx} chats]
-  (let [chats (map (map-chats cofx) chats)
-        filtered-chats (filter (filter-chats db) chats)]
-    {:db (update db :chats #(reduce
-                             (fn [acc {:keys [chat-id] :as chat}]
-                               (update acc chat-id merge chat))
-                             %
-                             chats))}))
+  (let [{:keys [all-chats chats-home-list removed-chats]}
+        (reduce (fn [acc {:keys [chat-id profile-public-key timeline? community-id active] :as chat}]
+                  (if (not active)
+                    (update acc :removed-chats conj chat-id)
+                    (cond-> acc
+                      (and (not profile-public-key) (not timeline?) (not community-id))
+                      (update :chats-home-list conj chat-id)
+                      :always
+                      (assoc-in [:all-chats chat-id] chat))))
+                {:all-chats {}
+                 :chats-home-list #{}
+                 :removed-chats #{}}
+                (map (map-chats cofx) chats))]
+    (fx/merge
+     cofx
+     {:db (-> db
+              (update :chats merge all-chats)
+              (update :chats-home-list set/union chats-home-list)
+              (update :chats #(apply dissoc % removed-chats))
+              (update :chats-home-list set/difference removed-chats))}
+     leave-removed-chat)))
 
 (fx/defn clear-history
   "Clears history of the particular chat"
@@ -140,11 +148,14 @@
     {:db            (-> db
                         (assoc-in [:messages chat-id] {})
                         (update-in [:message-lists] dissoc chat-id)
-                        (update-in [:chats chat-id] merge
-                                   {:last-message              nil
-                                    :unviewed-messages-count   0
-                                    :unviewed-mentions-count   0
-                                    :deleted-at-clock-value    last-message-clock-value}))}))
+                        (update :chats (fn [chats]
+                                         (if (contains? chats chat-id)
+                                           (update chats chat-id merge
+                                                   {:last-message              nil
+                                                    :unviewed-messages-count   0
+                                                    :unviewed-mentions-count   0
+                                                    :deleted-at-clock-value    last-message-clock-value})
+                                           chats))))}))
 
 (fx/defn clear-history-handler
   "Clears history of the particular chat"
@@ -164,7 +175,8 @@
   (fx/merge
    cofx
    {:db (-> db
-            (assoc-in [:chats chat-id :is-active] false)
+            (update :chats dissoc chat-id)
+            (update :chats-home-list disj chat-id)
             (assoc-in [:current-chat-id] nil))
     ::json-rpc/call [{:method "wakuext_deactivateChat"
                       :params [{:id chat-id}]
@@ -175,10 +187,12 @@
 (fx/defn offload-messages
   {:events [:offload-messages]}
   [{:keys [db]} chat-id]
-  {:db (-> db
-           (update :messages dissoc chat-id)
-           (update :message-lists dissoc chat-id)
-           (update :pagination-info dissoc chat-id))})
+  (merge {:db (-> db
+                  (update :messages dissoc chat-id)
+                  (update :message-lists dissoc chat-id)
+                  (update :pagination-info dissoc chat-id))}
+         (when (and (= chat-id constants/timeline-chat-id) (= (:view-id db) :status))
+           {:dispatch [:init-timeline-chat]})))
 
 (fx/defn close-chat
   {:events [:close-chat]}
@@ -202,28 +216,38 @@
             (when (not (= (:view-id db) :home))
               (navigation/pop-to-root-tab :chat-stack))))
 
+(fx/defn show-more-chats
+  {:events [:chat.ui/show-more-chats]}
+  [{:keys [db]}]
+  (when (< (:home-items-show-number db) (count (:chats db)))
+    {:db (update db :home-items-show-number + 40)}))
+
 (fx/defn preload-chat-data
   "Takes chat-id and coeffects map, returns effects necessary when navigating to chat"
   {:events [:chat.ui/preload-chat-data]}
-  [{:keys [db] :as cofx} chat-id]
+  [cofx chat-id]
   (loading/load-messages cofx chat-id))
 
 (fx/defn navigate-to-chat
   "Takes coeffects map and chat-id, returns effects necessary for navigation and preloading data"
   {:events [:chat.ui/navigate-to-chat]}
-  [{db :db :as cofx} chat-id]
+  [{db :db :as cofx} chat-id dont-reset?]
   (fx/merge cofx
             (close-chat (:current-chat-id db))
             (fn [{:keys [db]}]
               {:db (assoc db :current-chat-id chat-id :ignore-close-chat true)})
             (preload-chat-data chat-id)
-            (navigation/change-tab :chat)
-            (navigation/pop-to-root-tab :chat-stack)
+            #(when (group-chat? cofx chat-id)
+               (loading/load-chat % chat-id))
+            #(when-not dont-reset?
+               (navigation/change-tab % :chat))
+            #(when-not dont-reset?
+               (navigation/pop-to-root-tab % :chat-stack))
             (navigation/navigate-to-cofx :chat nil)))
 
 (fx/defn handle-clear-history-response
   {:events [::history-cleared]}
-  [{:keys [db] :as cofx} chat-id response]
+  [{:keys [db]} chat-id response]
   (let [chat (chats-store/<-rpc (first (:chats response)))]
     {:db (assoc-in db [:chats chat-id] chat)}))
 
@@ -231,7 +255,9 @@
   {:events [::one-to-one-chat-created]}
   [{:keys [db]} chat-id response]
   (let [chat (chats-store/<-rpc (first (:chats response)))]
-    {:db (assoc-in db [:chats chat-id] chat)
+    {:db (-> db
+             (assoc-in [:chats chat-id] chat)
+             (update :chats-home-list conj chat-id))
      :dispatch [:chat.ui/navigate-to-chat chat-id]}))
 
 (fx/defn navigate-to-user-pinned-messages
@@ -259,14 +285,16 @@
 
 (fx/defn handle-public-chat-created
   {:events [::public-chat-created]}
-  [{:keys [db] :as cofx} chat-id {:keys [dont-navigate?]} response]
+  [{:keys [db]} chat-id {:keys [dont-navigate?]} response]
   (let [chat (chats-store/<-rpc (first (:chats response)))
-        db-with-chat {:db (assoc-in db [:chats chat-id] chat)}]
+        db-with-chat {:db (-> db
+                              (assoc-in [:chats chat-id] chat)
+                              (update :chats-home-list conj chat-id))}]
     (if dont-navigate?
       db-with-chat
       (assoc db-with-chat :dispatch [:chat.ui/navigate-to-chat chat-id]))))
 
-(fx/defn create-public-chat-go [cofx chat-id opts]
+(fx/defn create-public-chat-go [_ chat-id opts]
   {::json-rpc/call [{:method "wakuext_createPublicChat"
                      :params [{:id chat-id}]
                      :on-success #(re-frame/dispatch [::public-chat-created chat-id opts %])
@@ -279,7 +307,7 @@
   (if (or (new-public-chat.db/valid-topic? topic) profile-public-key)
     (if (active-chat? cofx topic)
       (when-not dont-navigate?
-        (navigate-to-chat cofx topic))
+        (navigate-to-chat cofx topic false))
       (create-public-chat-go
        cofx
        topic
@@ -429,3 +457,15 @@
     :on-accept           #(do
                             (re-frame/dispatch [:bottom-sheet/hide])
                             (re-frame/dispatch [:chat.ui/remove-chat chat-id]))}})
+
+(fx/defn decrease-unviewed-count
+  {:events [:chat/decrease-unviewed-count]}
+  [{:keys [db]} chat-id {:keys [count countWithMentions]}]
+  {:db (-> db
+           ;; There might be some other requests being fired,
+           ;; so we need to make sure the count has not been set to
+           ;; 0 in the meantime
+           (update-in [:chats chat-id :unviewed-messages-count]
+                      #(max (- % count) 0))
+           (update-in [:chats chat-id :unviewed-mentions-count]
+                      #(max (- % countWithMentions) 0)))})

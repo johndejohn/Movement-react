@@ -1,6 +1,5 @@
 (ns status-im.navigation.core
   (:require
-   [status-im.ui.components.colors :as colors]
    [re-frame.core :as re-frame]
    [status-im.ui.screens.views :as views]
    [status-im.utils.platform :as platform]
@@ -61,9 +60,9 @@
   (merge options
          (roots/merge-top-bar {:elevation       0
                                :noBorder        true
-                               :title           {:color colors/black}
-                               :background      {:color colors/white}
-                               :leftButtonColor colors/black
+                               :title           {:color quo.colors/black}
+                               :background      {:color quo.colors/white}
+                               :leftButtonColor quo.colors/black
                                :leftButtons     {:id   "dismiss-modal"
                                                  :icon (icons/icon-source :main-icons/close)}}
                               options)))
@@ -137,7 +136,9 @@
    (fn [^js evn]
      (let [view-id (keyword (.-componentName evn))]
        (when (get views/screens view-id)
-         (when (and (not= view-id :bottom-sheet) (not= view-id :popover))
+         (when (and (not= view-id :bottom-sheet)
+                    (not= view-id :popover)
+                    (not= view-id :visibility-status-popover))
            (set-view-id view-id)
            (when-not @curr-modal
              (reset! pushed-screen-id view-id))))))))
@@ -147,7 +148,8 @@
   (.registerComponentDidDisappearListener
    (.events Navigation)
    (fn [^js evn]
-     (when-not (#{"popover" "bottom-sheet" "signing-sheet"} (.-componentName evn))
+     (when-not (#{"popover" "bottom-sheet" "signing-sheet" "visibility-status-popover"}
+                (.-componentName evn))
        (doseq [[_ {:keys [ref value]}] @quo.text-input/text-input-refs]
          (.setNativeProps ^js ref (clj->js {:text value})))
        (doseq [[^js text-input default-value] @react/text-input-refs]
@@ -180,6 +182,8 @@
 (defonce rset-app-launched
   (.registerAppLaunchedListener (.events Navigation)
                                 (fn []
+                                  (reset! curr-modal false)
+                                  (reset! dissmissing false)
                                   (if (or (= @root-id :multiaccounts) (= @root-id :multiaccounts-keycard))
                                     (re-frame/dispatch-sync [::set-multiaccount-root])
                                     (when @root-id
@@ -244,7 +248,7 @@
                                          :else
                                          (if (and (= :chat tab) platform/ios?)
                                            {:dotIndicator {:visible false}}
-                                           {:dotIndicator {:visible false} :badge nil}))}))))
+                                           {:dotIndicator {:visible false} :badge ""}))}))))
 
 (re-frame/reg-fx
  :pop-to-root-tab-fx
@@ -272,7 +276,7 @@
                  {:component {:name    comp
                               :id      comp
                               :options (merge (cond-> (roots/status-bar-options)
-                                                (and platform/android? (not (colors/dark?)))
+                                                (and platform/android? (not (quo.colors/dark?)))
                                                 (assoc-in [:statusBar :translucent] true))
                                               {:layout  {:componentBackgroundColor (if platform/android?
                                                                                      (:backdrop @quo.colors/theme)
@@ -288,6 +292,18 @@
 
 (re-frame/reg-fx :show-popover (fn [] (show-overlay "popover")))
 (re-frame/reg-fx :hide-popover (fn [] (dissmiss-overlay "popover")))
+
+;; VISIBILITY STATUS POPOVER
+(defonce visibility-status-popover-reg
+  (.registerComponent Navigation
+                      "visibility-status-popover"
+                      (fn [] (gestureHandlerRootHOC views/visibility-status-popover-comp))
+                      (fn [] views/visibility-status-popover-comp)))
+
+(re-frame/reg-fx :show-visibility-status-popover
+                 (fn [] (show-overlay "visibility-status-popover")))
+(re-frame/reg-fx :hide-visibility-status-popover
+                 (fn [] (dissmiss-overlay "visibility-status-popover")))
 
 ;; BOTTOM SHEETS
 (defonce bottom-sheet-reg

@@ -12,7 +12,7 @@
    [status-im.ui.screens.chat.components.input :as input]
    [status-im.ui.screens.chat.components.style :as input.style]
    [status-im.ui.screens.chat.audio-message.styles :as styles]
-   [status-im.ui.components.colors :as colors]
+   [quo.design-system.colors :as colors]
    [status-im.ui.components.animation :as anim]
    [status-im.ui.components.icons.icons :as icons]
    [status-im.utils.utils :as utils.utils]
@@ -20,8 +20,8 @@
    [status-im.utils.fx :as fx]))
 
 ;; reference db levels
-(def total-silence-db -120)
-(def silence-db -10)
+(def total-silence-db -160)
+(def silence-db -35)
 (def max-db 0)
 
 ;; update interval for the pulsing rec button
@@ -49,7 +49,7 @@
 
 ;; maximum 2 minutes of recordings time
 ;; to keep data under 900k
-(def max-recording-ms (* 45 60 1000))
+(def max-recording-ms (* 2 60 1000))
 
 ;; audio objects
 (defonce recorder-ref (atom nil))

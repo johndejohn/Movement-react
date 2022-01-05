@@ -19,6 +19,7 @@
             [status-im.constants :as constants]
             [status-im.multiaccounts.model :as multiaccounts.model]
             [status-im.notifications-center.core :as notifications-center]
+            [status-im.visibility-status-updates.core :as models.visibility-status-updates]
             [clojure.string :as string]))
 
 (fx/defn process-next
@@ -30,19 +31,21 @@
 (fx/defn process-response
   {:events [:process-response]}
   [{:keys [db] :as cofx} ^js response-js process-async]
-  (let [^js communities (.-communities response-js)
+  (let [^js communities                (.-communities response-js)
         ^js requests-to-join-community (.-requestsToJoinCommunity response-js)
-        ^js chats (.-chats response-js)
-        ^js contacts (.-contacts response-js)
-        ^js installations (.-installations response-js)
-        ^js messages (.-messages response-js)
-        ^js emoji-reactions (.-emojiReactions response-js)
-        ^js invitations (.-invitations response-js)
-        ^js removed-chats (.-removedChats response-js)
-        ^js activity-notifications (.-activityCenterNotifications response-js)
-        ^js pin-messages (.-pinMessages response-js)
-        sync-handler (when-not process-async process-response)]
-
+        ^js chats                      (.-chats response-js)
+        ^js contacts                   (.-contacts response-js)
+        ^js installations              (.-installations response-js)
+        ^js messages                   (.-messages response-js)
+        ^js emoji-reactions            (.-emojiReactions response-js)
+        ^js invitations                (.-invitations response-js)
+        ^js removed-chats              (.-removedChats response-js)
+        ^js activity-notifications     (.-activityCenterNotifications response-js)
+        ^js pin-messages               (.-pinMessages response-js)
+        ^js removed-messages           (.-removedMessages response-js)
+        ^js visibility-status-updates  (.-statusUpdates response-js)
+        ^js current-visibility-status  (.-currentStatus response-js)
+        sync-handler                   (when-not process-async process-response)]
     (cond
 
       (seq chats)
@@ -50,13 +53,7 @@
         (js-delete response-js "chats")
         (fx/merge cofx
                   (process-next response-js sync-handler)
-                  (models.chat/ensure-chats (map #(-> %
-                                                      (data-store.chats/<-rpc)
-                                                      ;; We dissoc this fields as they are handled by status-react and
-                                                      ;; not status-go, as there might be requests in-flight that change
-                                                      ;; this value
-                                                      (dissoc :unviewed-messages-count :unviewed-mentions-count))
-                                                 (types/js->clj chats)))))
+                  (models.chat/ensure-chats (map data-store.chats/<-rpc (types/js->clj chats)))))
 
       (seq messages)
       (models.message/receive-many cofx response-js)
@@ -77,11 +74,16 @@
                   (models.pairing/handle-installations installations-clj)))
 
       (seq contacts)
-      (let [contacts-clj (types/js->clj contacts)]
+      (let [contacts-clj (types/js->clj contacts)
+            ^js chats (.-chatsForContacts response-js)]
         (js-delete response-js "contacts")
+        (js-delete response-js "chatsForContacts")
         (fx/merge cofx
                   (process-next response-js sync-handler)
-                  (models.contact/ensure-contacts (map data-store.contacts/<-rpc contacts-clj))))
+                  (models.contact/ensure-contacts
+                   (map data-store.contacts/<-rpc contacts-clj)
+                   (when chats
+                     (map data-store.chats/<-rpc (types/js->clj chats))))))
 
       (seq communities)
       (let [communities-clj (types/js->clj communities)]
@@ -122,7 +124,30 @@
         (js-delete response-js "invitations")
         (fx/merge cofx
                   (process-next response-js sync-handler)
-                  (models.group/handle-invitations (map data-store.invitations/<-rpc invitations)))))))
+                  (models.group/handle-invitations (map data-store.invitations/<-rpc invitations))))
+
+      (seq removed-messages)
+      (let [removed-messages-clj (types/js->clj removed-messages)]
+        (js-delete response-js "removedMessages")
+        (fx/merge cofx
+                  (process-next response-js sync-handler)
+                  (models.message/handle-removed-messages removed-messages-clj)))
+
+      (seq visibility-status-updates)
+      (let [visibility-status-updates-clj (types/js->clj visibility-status-updates)]
+        (js-delete response-js "statusUpdates")
+        (fx/merge cofx
+                  (process-next response-js sync-handler)
+                  (models.visibility-status-updates/handle-visibility-status-updates
+                   visibility-status-updates-clj)))
+
+      (some? current-visibility-status)
+      (let [current-visibility-status-clj (types/js->clj current-visibility-status)]
+        (js-delete response-js "currentStatus")
+        (fx/merge cofx
+                  (process-next response-js sync-handler)
+                  (models.visibility-status-updates/sync-visibility-status-update
+                   current-visibility-status-clj))))))
 
 (defn group-by-and-update-unviewed-counts
   "group messages by current chat, profile updates, transactions and update unviewed counters in db for not curent chats"
@@ -176,22 +201,23 @@
   "before processing we want to filter and sort messages, so we can process first only messages which will be showed"
   {:events [:sanitize-messages-and-process-response]}
   [{:keys [db] :as cofx} ^js response-js process-async]
-  (let [current-chat-id (:current-chat-id db)
-        {:keys [db messages transactions chats statuses]}
-        (reduce group-by-and-update-unviewed-counts
-                {:db db :chats #{} :transactions #{} :statuses [] :messages []
-                 :current-chat-id current-chat-id}
-                (.-messages response-js))]
-    (sort-js-messages! response-js messages)
-    (fx/merge cofx
-              {:db db
-               :utils/dispatch-later (concat []
-                                             (when (seq statuses)
-                                               [{:ms 100 :dispatch [:process-statuses statuses]}])
-                                             (when (seq transactions)
-                                               (for [transaction-hash transactions]
-                                                 {:ms 100 :dispatch [:watch-tx transaction-hash]})))}
-              (process-response response-js process-async))))
+  (when response-js
+    (let [current-chat-id (:current-chat-id db)
+          {:keys [db messages transactions chats statuses]}
+          (reduce group-by-and-update-unviewed-counts
+                  {:db db :chats #{} :transactions #{} :statuses [] :messages []
+                   :current-chat-id current-chat-id}
+                  (.-messages response-js))]
+      (sort-js-messages! response-js messages)
+      (fx/merge cofx
+                {:db db
+                 :utils/dispatch-later (concat []
+                                               (when (seq statuses)
+                                                 [{:ms 100 :dispatch [:process-statuses statuses]}])
+                                               (when (seq transactions)
+                                                 (for [transaction-hash transactions]
+                                                   {:ms 100 :dispatch [:watch-tx transaction-hash]})))}
+                (process-response response-js process-async)))))
 
 (fx/defn remove-hash
   [{:keys [db]} envelope-hash]

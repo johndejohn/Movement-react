@@ -8,7 +8,7 @@
             [status-im.i18n.i18n :as i18n]
             [status-im.multiaccounts.update.core :as multiaccounts.update]
             [status-im.native-module.core :as status]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.list-selection :as list-selection]
             [status-im.navigation :as navigation]
             [status-im.utils.fx :as fx]
@@ -24,7 +24,8 @@
             [status-im.ethereum.ens :as ens]
             [status-im.ens.core :as ens.core]
             [status-im.ethereum.resolver :as resolver]
-            [status-im.utils.mobile-sync :as utils.mobile-sync]))
+            [status-im.utils.mobile-sync :as utils.mobile-sync]
+            [status-im.multiaccounts.key-storage.core :as key-storage]))
 
 (fx/defn start-adding-new-account
   {:events [:wallet.accounts/start-adding-new-account]}
@@ -209,6 +210,7 @@
                 (if (utils.mobile-sync/syncing-allowed? cofx)
                   (wallet/set-max-block address 0)
                   (wallet/update-balances nil true))
+                (wallet/fetch-collectibles-collection)
                 (prices/update-prices)
                 (navigation/navigate-back)))))
 
@@ -275,11 +277,12 @@
 
 (fx/defn save-account
   {:events [:wallet.accounts/save-account]}
-  [{:keys [db]} account {:keys [name color]}]
+  [{:keys [db]} account {:keys [name color hidden]}]
   (let [accounts (:multiaccount/accounts db)
         new-account  (cond-> account
                        name (assoc :name name)
-                       color (assoc :color color))
+                       color (assoc :color color)
+                       (not (nil? hidden)) (assoc :hidden hidden))
         new-accounts (replace {account new-account} accounts)]
     {::json-rpc/call [{:method     "accounts_saveAccounts"
                        :params     [[new-account]]
@@ -291,7 +294,7 @@
   [{:keys [db] :as cofx} account]
   (let [accounts (:multiaccount/accounts db)
         new-accounts (vec (remove #(= account %) accounts))
-        deleted-address (get-in account [:address])]
+        deleted-address (:address account)]
     (fx/merge cofx
               {::json-rpc/call [{:method     "accounts_deleteAccount"
                                  :params     [(:address account)]
@@ -300,6 +303,23 @@
                        (assoc :multiaccount/accounts new-accounts)
                        (update-in [:wallet :accounts] dissoc deleted-address))}
               (navigation/pop-to-root-tab :wallet-stack))))
+
+(fx/defn delete-account-key
+  {:events [:wallet.accounts/delete-key]}
+  [{:keys [db] :as cofx} account password on-error]
+  (let [deleted-address (:address account)
+        dapps-address (get-in cofx [:db :multiaccount :dapps-address])]
+    (if (= (string/lower-case dapps-address) (string/lower-case deleted-address))
+      {:utils/show-popup {:title   (i18n/label :t/warning)
+                          :content (i18n/label :t/account-is-used)}}
+      {::key-storage/delete-imported-key
+       {:key-uid    (get-in db [:multiaccount :key-uid])
+        :address    (:address account)
+        :password   password
+        :on-success #(do
+                       (re-frame/dispatch [:hide-popover])
+                       (re-frame/dispatch [:wallet.accounts/delete-account account]))
+        :on-error   on-error}})))
 
 (fx/defn view-only-qr-scanner-result
   {:events [:wallet.add-new/qr-scanner-result]}
@@ -323,3 +343,4 @@
   {:events [:wallet.accounts/share]}
   [_ address]
   {:list.selection/open-share {:message (eip55/address->checksum address)}})
+

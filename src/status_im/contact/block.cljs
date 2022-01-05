@@ -35,7 +35,13 @@
   {:events [::contact-blocked]}
   [{:keys [db] :as cofx} {:keys [public-key]} chats]
   (let [fxs (map #(clean-up-chat public-key %) chats)]
-    (apply fx/merge cofx fxs)))
+    (apply fx/merge
+           cofx
+           {:db (-> db
+                    (update :chats dissoc public-key)
+                    (update :chats-home-list disj public-key)
+                    (assoc-in [:contacts/contacts public-key :added] false))}
+           fxs)))
 
 (fx/defn block-contact
   {:events [:contact.ui/block-contact-confirmed]}
@@ -43,17 +49,16 @@
   (let [contact (-> (contact.db/public-key->contact
                      (:contacts/contacts db)
                      public-key)
-                    (assoc :last-updated now)
-                    (update :system-tags (fnil conj #{}) :contact/blocked))
+                    (assoc :last-updated now
+                           :blocked true
+                           :added false))
         from-one-to-one-chat? (not (get-in db [:chats (:current-chat-id db) :group-chat]))]
     (fx/merge cofx
               {:db (-> db
                        ;; add the contact to blocked contacts
                        (update :contacts/blocked (fnil conj #{}) public-key)
                        ;; update the contact in contacts list
-                       (assoc-in [:contacts/contacts public-key] contact)
-                       ;; remove the 1-1 chat if it exists
-                       (update-in [:chats] dissoc public-key))}
+                       (assoc-in [:contacts/contacts public-key] contact))}
               (contacts-store/block contact #(do (re-frame/dispatch [::contact-blocked contact (map chats-store/<-rpc %)])
                                                  (re-frame/dispatch [:hide-popover])))
               ;; reset navigation to avoid going back to non existing one to one chat
@@ -62,11 +67,10 @@
                 (navigation/navigate-back)))))
 
 (fx/defn unblock-contact
-  {:events [:contact.ui/unblock-contact-pressed]}
+  {:events [:contact.ui/unblock-contact-pressed ::contact-unblocked]}
   [{:keys [db now] :as cofx} public-key]
   (let [contact (-> (get-in db [:contacts/contacts public-key])
-                    (assoc :last-updated now)
-                    (update :system-tags disj :contact/blocked))]
+                    (assoc :last-updated now :blocked false))]
     (fx/merge cofx
               {:db (-> db
                        (update :contacts/blocked disj public-key)

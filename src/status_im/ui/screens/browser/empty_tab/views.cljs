@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [status-im.i18n.i18n :as i18n]
             [status-im.react-native.resources :as resources]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.common.common :as components.common]
             [status-im.ui.components.icons.icons :as icons]
             [quo.core :as quo]
@@ -73,11 +73,11 @@
 
 (defn list-header [empty?]
   [react/view
-   [react/touchable-highlight {:on-press #(re-frame/dispatch [:browser.ui/open-url "https://mstdn.social/auth/sign_in"])}
+   [react/touchable-highlight {:on-press #(re-frame/dispatch [:browser.ui/open-url "https://dap.ps"])}
     [react/view (styles/dapp-store-container)
      [dapp-image nil dapp-image-data]
      [react/text {:style styles/open-dapp-store} (i18n/label :t/open-dapp-store)]
-     [react/text {:style {:color colors/blue :font-size 13 :line-height 22}} "https://biogra.ml ->"]]]
+     [react/text {:style {:color colors/blue :font-size 13 :line-height 22}} "https://dap.ps ->"]]]
    (when-not empty?
      [react/view {:margin-top 14 :margin-left 16 :margin-bottom 4}
       [react/text {:style {:line-height 22 :font-size 15 :color colors/gray}}

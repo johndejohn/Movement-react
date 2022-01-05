@@ -36,12 +36,6 @@
        :icon                :main-icons/check
        :on-press            #(hide-sheet-and-dispatch [:chat.ui/mark-all-read-pressed chat-id])}]
      [quo/list-item
-      {:theme               :accent
-       :title               (i18n/label :t/clear-history)
-       :accessibility-label :clear-history-button
-       :icon                :main-icons/close
-       :on-press            #(re-frame/dispatch [:chat.ui/clear-history-pressed chat-id])}]
-     [quo/list-item
       {:theme               :negative
        :title               (i18n/label :t/delete-chat)
        :accessibility-label :delete-chat-button
@@ -83,29 +77,25 @@
        :on-press            #(re-frame/dispatch [:chat.ui/remove-chat-pressed chat-id])}]]))
 
 (defn community-chat-accents []
-  (fn [{:keys [chat-id group-chat chat-name color]}]
+  (fn [{:keys [chat-id group-chat chat-name color emoji]}]
     [react/view
      [quo/list-item
       {:theme               :accent
        :title               chat-name
-       :icon                [chat-icon/chat-icon-view-chat-sheet
-                             chat-id group-chat chat-name color]
+       :icon                [chat-icon/emoji-chat-icon-view-chat-sheet
+                             chat-id group-chat chat-name color emoji]
        :subtitle            (i18n/label :t/view-details)
        :chevron             true
        :accessibility-label :view-community-channel-details
-       :on-press            #(hide-sheet-and-dispatch [:navigate-to :community-channel-details {:chat-id chat-id}])}]
+       :on-press            #(do
+                               (hide-sheet-and-dispatch [:navigate-to :community-channel-details {:chat-id chat-id}])
+                               (re-frame/dispatch [::models.pin-message/load-pin-messages chat-id]))}]
      [quo/list-item
       {:theme               :accent
        :title               (i18n/label :t/mark-all-read)
        :accessibility-label :mark-all-read-button
        :icon                :main-icons/check
-       :on-press            #(hide-sheet-and-dispatch [:chat.ui/mark-all-read-pressed chat-id])}]
-     [quo/list-item
-      {:theme               :accent
-       :title               (i18n/label :t/clear-history)
-       :accessibility-label :clear-history-button
-       :icon                :main-icons/close
-       :on-press            #(re-frame/dispatch [:chat.ui/clear-history-pressed chat-id])}]]))
+       :on-press            #(hide-sheet-and-dispatch [:chat.ui/mark-all-read-pressed chat-id])}]]))
 
 (defn group-chat-accents []
   (fn [{:keys [chat-id group-chat chat-name color invitation-admin]}]
@@ -135,12 +125,6 @@
            :accessibility-label :mark-all-read-button
            :icon                :main-icons/check
            :on-press            #(hide-sheet-and-dispatch [:chat.ui/mark-all-read-pressed chat-id])}]
-         [quo/list-item
-          {:theme               :accent
-           :title               (i18n/label :t/clear-history)
-           :accessibility-label :clear-history-button
-           :icon                :main-icons/close
-           :on-press            #(re-frame/dispatch [:chat.ui/clear-history-pressed chat-id])}]
          (when joined?
            [quo/list-item
             {:theme               :negative

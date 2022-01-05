@@ -1,32 +1,32 @@
 (ns status-im.ui.screens.signing.views
   (:require-macros [status-im.utils.views :as views])
-  (:require [status-im.ui.components.react :as react]
-            [re-frame.core :as re-frame]
-            [status-im.multiaccounts.core :as multiaccounts]
-            [status-im.ui.components.colors :as colors]
-            [status-im.ui.components.copyable-text :as copyable-text]
-            [status-im.wallet.utils :as wallet.utils]
-            [status-im.ui.components.list.views :as list]
-            [status-im.keycard.common :as keycard.common]
-            [status-im.ui.screens.keycard.keycard-interaction :as keycard-sheet]
-            [status-im.ui.components.chat-icon.screen :as chat-icon]
-            [status-im.ui.components.icons.icons :as icons]
-            [status-im.i18n.i18n :as i18n]
-            [status-im.utils.security :as security]
-            [status-im.ui.screens.signing.sheets :as sheets]
-            [status-im.ethereum.tokens :as tokens]
-            [status-im.utils.types :as types]
-            [status-im.utils.platform :as platform]
-            [clojure.string :as string]
+  (:require [clojure.string :as string]
             [quo.core :as quo]
+            [quo.design-system.colors :as colors]
             [quo.gesture-handler :as gh]
-            [status-im.ui.screens.signing.styles :as styles]
-            [status-im.react-native.resources :as resources]
-            [status-im.ui.screens.keycard.pin.views :as pin.views]
-            [status-im.ui.components.bottom-panel.views :as bottom-panel]
-            [status-im.utils.utils :as utils]
+            [re-frame.core :as re-frame]
             [reagent.core :as reagent]
-            [status-im.signing.eip1559 :as eip1559]))
+            [status-im.ethereum.tokens :as tokens]
+            [status-im.i18n.i18n :as i18n]
+            [status-im.keycard.common :as keycard.common]
+            [status-im.multiaccounts.core :as multiaccounts]
+            [status-im.react-native.resources :as resources]
+            [status-im.signing.eip1559 :as eip1559]
+            [status-im.ui.components.bottom-panel.views :as bottom-panel]
+            [status-im.ui.components.chat-icon.screen :as chat-icon]
+            [status-im.ui.components.copyable-text :as copyable-text]
+            [status-im.ui.components.icons.icons :as icons]
+            [status-im.ui.components.react :as react]
+            [status-im.ui.screens.keycard.keycard-interaction :as keycard-sheet]
+            [status-im.ui.screens.keycard.pin.views :as pin.views]
+            [status-im.ui.screens.signing.sheets :as sheets]
+            [status-im.ui.screens.signing.styles :as styles]
+            [status-im.ui.screens.wallet.components.views :as wallet.components]
+            [status-im.utils.platform :as platform]
+            [status-im.utils.security :as security]
+            [status-im.utils.types :as types]
+            [status-im.utils.utils :as utils]
+            [status-im.wallet.utils :as wallet.utils]))
 
 (defn separator []
   [react/view {:height 1 :background-color colors/gray-lighter}])
@@ -61,7 +61,7 @@
                               :style {:margin-right 8}}
                     display-symbol]
                    (if icon
-                     [list/item-image
+                     [wallet.components/token-icon
                       (assoc icon
                              :style {:background-color colors/gray-lighter
                                      :border-radius    16}
@@ -382,13 +382,12 @@
                           [react/text {:style {:color colors/black}}
                            (i18n/format-currency converted-fee-value (:code wallet-currency))])
                         [react/text {:style {:color colors/gray}} (str " " (:code wallet-currency))]]))
-        :on-press  #(re-frame/dispatch
-                     [:signing.ui/open-fee-sheet
-                      {:content        (fn []
-                                         (if (eip1559/sync-enabled?)
-                                           [sheets/fee-bottom-sheet-eip1559 fee-display-symbol]
-                                           [sheets/fee-bottom-sheet fee-display-symbol]))
-                       :content-height 270}])}])))
+        :on-press #(re-frame/dispatch
+                    [:signing.ui/open-fee-sheet
+                     {:content        (fn []
+                                        (if (eip1559/enabled?)
+                                          [sheets/fee-bottom-sheet-eip1559-custom fee-display-symbol]
+                                          [sheets/fee-bottom-sheet fee-display-symbol]))}])}])))
 
 (views/defview network-item []
   (views/letsubs [network-name [:network-name]]
@@ -397,6 +396,15 @@
       :size           :small
       :accessory      :text
       :accessory-text network-name}]))
+
+(defn advanced-item []
+  [:<>
+   [separator]
+   [quo/list-item
+    {:size  :small
+     :title (i18n/label :t/advanced)
+     :chevron true
+     :on-press #(re-frame/dispatch [:bottom-sheet/show-sheet {:content sheets/advanced}])}]])
 
 (views/defview sheet
   [{:keys [from contact amount token cancel?] :as tx}]
@@ -409,7 +417,8 @@
                   prices                [:prices]
                   wallet-currency       [:wallet/currency]
                   mainnet?              [:mainnet?]
-                  prices-loading?       [:prices-loading?]]
+                  prices-loading?       [:prices-loading?]
+                  management-enabled?   [:wallet/transactions-management-enabled?]]
     (let [display-symbol     (wallet.utils/display-symbol token)
           fee-display-symbol (wallet.utils/display-symbol (tokens/native-currency chain))]
       [react/view (styles/sheet)
@@ -434,6 +443,8 @@
             [amount-item prices wallet-currency amount amount-error display-symbol fee-display-symbol prices-loading?])
           [separator]
           [fee-item prices wallet-currency fee-display-symbol fee gas-error gas-error-state prices-loading?]
+          (when (and management-enabled? (not keycard-multiaccount?))
+            [advanced-item])
           (when (= :gas-is-set gas-error-state)
             [react/text {:style {:color colors/gray :margin-horizontal 32 :text-align :center}}
              (i18n/label :t/tx-fail-description1)])

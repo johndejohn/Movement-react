@@ -5,10 +5,11 @@
             [status-im.ethereum.transactions.core :as transactions]
             [status-im.i18n.i18n :as i18n]
             [status-im.ui.components.chat-icon.screen :as chat-icon]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.icons.icons :as icons]
             [status-im.ui.components.react :as react]
-            [status-im.utils.money :as money]))
+            [status-im.utils.money :as money]
+            [status-im.utils.utils :as utils]))
 
 (defn- final-status? [command-state]
   (or (= command-state constants/command-state-request-address-for-transaction-declined)
@@ -39,7 +40,11 @@
     (if (and (or (= command-state constants/command-state-request-transaction)
                  (= command-state constants/command-state-request-address-for-transaction-accepted))
              (= direction :incoming))
-      (str (i18n/label :t/shared) " '" (:name @(re-frame/subscribe [:account-by-address to])) "'")
+      (str (i18n/label :t/shared)
+           " '"
+           (or (:name @(re-frame/subscribe [:account-by-address to]))
+               (utils/get-shortened-checksum-address to))
+           "'")
       (i18n/label (cond
                     (= command-state constants/command-state-transaction-pending)
                     :t/status-pending

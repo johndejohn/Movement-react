@@ -64,6 +64,17 @@
         (str "@" (or username ens-name)))
       (or alias (gfycat/generate-gfy public-key)))))
 
+(defn contact-by-identity [contacts identity]
+  (or (get contacts identity)
+      (contact-with-names {:public-key identity})))
+
+(defn contact-two-names-by-identity [contact current-multiaccount identity]
+  (let [me? (= (:public-key current-multiaccount) identity)]
+    (if me?
+      [(or (:preferred-name current-multiaccount)
+           (gfycat/generate-gfy identity))]
+      (contact-two-names contact false))))
+
 (def photo-quality-thumbnail :thumbnail)
 (def photo-quality-large :large)
 
@@ -170,6 +181,15 @@
             {::switch-theme theme}
             (multiaccounts.update/multiaccount-update :appearance theme {})))
 
+(fx/defn switch-profile-picture-show-to
+  {:events [:multiaccounts.ui/profile-picture-show-to-switched]}
+  [cofx id]
+  (fx/merge cofx
+            {::json-rpc/call [{:method "wakuext_changeIdentityImageShowTo"
+                               :params [id]
+                               :on-success #(log/debug "picture settings changed successfully")}]}
+            (multiaccounts.update/optimistic :profile-pictures-show-to id)))
+
 (fx/defn switch-appearance-profile
   {:events [:multiaccounts.ui/appearance-profile-switched]}
   [cofx id]
@@ -192,6 +212,20 @@
               (multiaccounts.update/optimistic :images [{:url  path
                                                          :type (name photo-quality-large)}])
               (bottom-sheet/hide-bottom-sheet))))
+
+(fx/defn save-profile-picture-from-url
+  {:events [::save-profile-picture-from-url]}
+  [cofx url]
+  (let [key-uid (get-in cofx [:db :multiaccount :key-uid])]
+    (fx/merge cofx
+              {::json-rpc/call [{:method     "multiaccounts_storeIdentityImageFromURL"
+                                 :params     [key-uid url]
+                                 :on-error   #(log/error "::save-profile-picture-from-url error" %)
+                                 :on-success #(re-frame/dispatch [::update-local-picture %])}]}
+              (bottom-sheet/hide-bottom-sheet))))
+
+(comment
+  (re-frame/dispatch [::save-profile-picture-from-url "https://lh3.googleusercontent.com/XuKjNm3HydsaxbPkbpGs9YyCKhn5QQk5oDC8XF2jzmPyYXeZofxFtfUDZuQ3EVmacS_BlBKzbX2ypm37YNX3n1fDJA3WndeFcPsp7Z0=w600"]))
 
 (fx/defn delete-profile-picture
   {:events [::delete-profile-picture]}

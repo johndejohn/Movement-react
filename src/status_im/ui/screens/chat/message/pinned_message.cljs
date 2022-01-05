@@ -1,13 +1,12 @@
 (ns status-im.ui.screens.chat.message.pinned-message
   (:require [re-frame.core :as re-frame]
             [status-im.i18n.i18n :as i18n]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.react :as react]
             [quo.core :as quo]
             [reagent.core :as reagent]
             [status-im.chat.models.pin-message :as models.pin-message]
             [status-im.ui.components.list.views :as list]
-            [status-im.ui.components.radio :as radio]
             [status-im.utils.handlers :refer [<sub]]
             [status-im.ui.screens.chat.message.message :as message]))
 
@@ -39,15 +38,15 @@
     [react/view {:style {:position    :absolute
                          :right       18
                          :padding-top 4}}
-     [radio/radio (= @selected-unpin message-id)]]]])
+     [quo/radio {:value (= @selected-unpin message-id)}]]]])
 
 (def list-key-fn #(or (:message-id %) (:value %)))
 
 (defn pinned-messages-limit-list [chat-id]
-  (let [pinned-messages @(re-frame/subscribe [:chats/pinned chat-id])]
+  (let [pinned-messages @(re-frame/subscribe [:chats/pinned-sorted-list chat-id])]
     [list/flat-list
      {:key-fn                       list-key-fn
-      :data                         (reverse (vals pinned-messages))
+      :data                         (reverse pinned-messages)
       :render-data                  {:chat-id chat-id}
       :render-fn                    render-pin-fn
       :on-scroll-to-index-failed    identity

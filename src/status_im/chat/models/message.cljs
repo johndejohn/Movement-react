@@ -1,5 +1,6 @@
 (ns status-im.chat.models.message
   (:require [status-im.chat.models :as chat-model]
+            [re-frame.core :as re-frame]
             [status-im.chat.models.message-list :as message-list]
             [status-im.constants :as constants]
             [status-im.data-store.messages :as data-store.messages]
@@ -9,11 +10,11 @@
             [taoensso.timbre :as log]
             [status-im.chat.models.mentions :as mentions]
             [clojure.string :as string]
-            [status-im.contact.db :as contact.db]
             [status-im.utils.types :as types]
             [status-im.ui.screens.chat.state :as view.state]
             [status-im.chat.models.loading :as chat.loading]
-            [status-im.utils.platform :as platform]))
+            [status-im.utils.platform :as platform]
+            [status-im.utils.gfycat.core :as gfycat]))
 
 (defn- message-loaded?
   [db chat-id message-id]
@@ -31,21 +32,24 @@
 (defn hide-message
   "Hide chat message, rebuild message-list"
   [{:keys [db]} chat-id message-id]
-  ;;TODO this is too expensive, probably we could mark message somehow and just hide it in the UI
+  ;; TODO this is too expensive, probably we could mark message somehow and just hide it in the UI
   (message-list/rebuild-message-list {:db (update-in db [:messages chat-id] dissoc message-id)} chat-id))
 
 (fx/defn add-senders-to-chat-users
   {:events [:chat/add-senders-to-chat-users]}
   [{:keys [db]} messages]
   (reduce (fn [acc {:keys [chat-id alias name identicon from]}]
-            (update-in acc [:db :chats chat-id :users] assoc
-                       from
-                       (mentions/add-searchable-phrases
-                        {:alias      alias
-                         :name       (or name alias)
-                         :identicon  identicon
-                         :public-key from
-                         :nickname   (get-in db [:contacts/contacts from :nickname])})))
+            (let [alias (if (string/blank? alias)
+                          (gfycat/generate-gfy from)
+                          alias)]
+              (update-in acc [:db :chats chat-id :users] assoc
+                         from
+                         (mentions/add-searchable-phrases
+                          {:alias      alias
+                           :name       (or name alias)
+                           :identicon  identicon
+                           :public-key from
+                           :nickname   (get-in db [:contacts/contacts from :nickname])}))))
           {:db db}
           messages))
 
@@ -55,14 +59,14 @@
    (or
     (= chat-id (chat-model/my-profile-chat-topic db))
     (when-let [pub-key (get-in db [:chats chat-id :profile-public-key])]
-      (contact.db/added? db pub-key)))))
+      (get-in db [:contacts/contacts pub-key :added])))))
 
 (defn get-timeline-message [db chat-id message-js]
   (when (timeline-message? db chat-id)
     (data-store.messages/<-rpc (types/js->clj message-js))))
 
 (defn add-message [{:keys [db] :as acc} message-js chat-id message-id cursor-clock-value]
-  (let [{:keys [alias replace from clock-value] :as message}
+  (let [{:keys [replace from clock-value] :as message}
         (data-store.messages/<-rpc (types/js->clj message-js))]
     (if (message-loaded? db chat-id message-id)
       ;; If the message is already loaded, it means it's an update, that
@@ -82,8 +86,7 @@
                    :cursor-clock-value clock-value)
 
         ;;conj sender for add-sender-to-chat-users
-        (and (not (string/blank? alias))
-             (not (get-in db [:chats chat-id :users from])))
+        (not (get-in db [:chats chat-id :users from]))
         (update :senders assoc from message)
 
         (not (string/blank? replace))
@@ -128,8 +131,8 @@
     {:db db
      :utils/dispatch-later
      (concat [{:ms 20 :dispatch [:process-response response-js]}]
-             (when-let [chat-id (:current-chat-id db)]
-               [{:ms 100 :dispatch [:chat/mark-all-as-read chat-id]}])
+             (when (and (:current-chat-id db) (= "active" (:app-state db)))
+               [{:ms 100 :dispatch [:chat/mark-all-as-read (:current-chat-id db)]}])
              (when (seq senders)
                [{:ms 100 :dispatch [:chat/add-senders-to-chat-users (vals senders)]}]))}))
 
@@ -194,3 +197,28 @@
 (fx/defn send-messages
   [cofx messages]
   (protocol/send-chat-messages cofx messages))
+
+(fx/defn handle-removed-messages
+  {:events [::handle-removed-messages]}
+  [{:keys [db] :as cofx} removed-messages]
+  (let [mark-as-seen-fx (mapv (fn [removed-message]
+                                (let [chat-id (:chatId removed-message)
+                                      message-id (:messageId removed-message)]
+                                  (data-store.messages/mark-messages-seen chat-id
+                                                                          [message-id]
+                                                                          #(re-frame/dispatch [:chat/decrease-unviewed-count chat-id %3])))) removed-messages)
+        remove-messages-fx (fn [{:keys [db]}]
+                             {:db (reduce (fn [acc current]
+                                            (update-in acc [:messages (:chatId current)] dissoc (:messageId current)))
+                                          db removed-messages)
+                              :dispatch-n [[:get-activity-center-notifications]
+                                           [:get-activity-center-notifications-count]]})]
+    (apply fx/merge cofx (conj mark-as-seen-fx remove-messages-fx))))
+
+(comment
+  (handle-removed-messages
+   {:db {:messages {:c1 {:m1 {:chat-id :c1 :message-id :m1}
+                         :m2 {:chat-id :c1 :message-id :m2}}
+                    :c2 {:m3 {:chat-id :c2 :message-id :m3}
+                         :m4 {:chat-id :c2 :message-id :m4}}}}}
+   [:m1 :m3]))

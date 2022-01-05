@@ -28,6 +28,7 @@
             [status-im.async-storage.core :as async-storage]
             [status-im.popover.core :as popover.core]
             [status-im.signing.eip1559 :as eip1559]
+            [status-im.signing.gas :as signing.gas]
             [clojure.set :as clojure.set]))
 
 (defn get-balance
@@ -210,6 +211,59 @@
  :wallet/get-tokens-balances
  get-token-balances)
 
+(fx/defn collectibles-collection-fetch-success
+  {:events [::collectibles-collection-fetch-success]}
+  [{:keys [db]} address collection]
+  {:db (assoc-in db [:wallet/collectible-collections address] collection)})
+
+(fx/defn fetch-collectibles-collection
+  {:events [::fetch-collectibles-collection]}
+  [{:keys [db]}]
+  (let [addresses (map (comp string/lower-case :address)
+                       (get db :multiaccount/accounts))
+        chain-id  (-> db
+                      ethereum/current-network
+                      ethereum/network->chain-id)]
+    (when (get-in db [:multiaccount :opensea-enabled?])
+      {::json-rpc/call (map (fn [address]
+                              {:method     "wallet_getOpenseaCollectionsByOwner"
+                               :params     [chain-id address]
+                               :on-error   (fn [error]
+                                             (log/error "Unable to get Opensea collections" address error))
+                               :on-success #(re-frame/dispatch [::collectibles-collection-fetch-success address %])})
+                            addresses)})))
+
+(fx/defn collectible-assets-fetch-success
+  {:events [::collectible-assets-fetch-success]}
+  [{:keys [db]} address collectible-slug assets]
+  {:db (-> db
+           (assoc-in [:wallet/fetching-collection-assets collectible-slug] false)
+           (assoc-in [:wallet/collectible-assets address collectible-slug] assets))})
+
+(fx/defn collectibles-assets-fetch-error
+  {:events [::collectibles-assets-fetch-error]}
+  [{:keys [db]} collectible-slug]
+  {:db (assoc-in db [:wallet/fetching-collection-assets collectible-slug] false)})
+
+(fx/defn fetch-collectible-assets-by-owner-and-collection
+  {:events [::fetch-collectible-assets-by-owner-and-collection]}
+  [{:keys [db]} address collectible-slug limit]
+  (let [chain-id (ethereum/network->chain-id (ethereum/current-network db))]
+    {:db (assoc-in db [:wallet/fetching-collection-assets collectible-slug] true)
+     ::json-rpc/call [{:method     "wallet_getOpenseaAssetsByOwnerAndCollection"
+                       :params     [chain-id address collectible-slug limit]
+                       :on-error   (fn [error]
+                                     (log/error "Unable to get collectible assets" address error)
+                                     (re-frame/dispatch [::collectibles-assets-fetch-error collectible-slug]))
+                       :on-success #(re-frame/dispatch [::collectible-assets-fetch-success address collectible-slug %])}]}))
+
+(fx/defn show-nft-details
+  {:events [::show-nft-details]}
+  [cofx asset]
+  (fx/merge cofx
+            {:db (assoc (:db cofx) :wallet/selected-collectible asset)}
+            (navigation/open-modal :nft-details {})))
+
 (defn rpc->token [tokens]
   (reduce (fn [acc {:keys [address] :as token}]
             (assoc acc
@@ -289,7 +343,7 @@
   {:events [::update-balance-success]}
   [{:keys [db]} address balance]
   {:db (assoc-in db
-                 [:wallet :accounts (eip55/address->checksum address) :balance :INT]
+                 [:wallet :accounts (eip55/address->checksum address) :balance :ETH]
                  (money/bignumber balance))})
 
 (fx/defn set-cached-balances
@@ -380,25 +434,42 @@
 
 (fx/defn wallet-send-gas-price-success
   {:events [:wallet.send/update-gas-price-success]}
-  [{db :db} price]
+  [{db :db} tx-entry price]
   (if (eip1559/sync-enabled?)
-    (let [{:keys [base-fee max-priority-fee]} price
-          max-priority-fee-bn (money/bignumber max-priority-fee)]
+    (let [{:keys [slow-base-fee normal-base-fee fast-base-fee
+                  current-base-fee max-priority-fee]}
+          price
+          max-priority-fee-bn (money/with-precision
+                               (signing.gas/get-suggested-tip max-priority-fee)
+                                0)
+          fee-cap  (-> normal-base-fee
+                       money/bignumber
+                       (money/add max-priority-fee-bn)
+                       money/to-hex)
+          tip-cap (money/to-hex max-priority-fee-bn)]
       {:db (-> db
-               (update :wallet/prepare-transaction assoc
-                       :maxFeePerGas (money/to-hex (money/add max-priority-fee-bn base-fee))
-                       :maxPriorityFeePerGas max-priority-fee)
-               (assoc :wallet/latest-base-fee base-fee
-                      :wallet/latest-priority-fee max-priority-fee))})
-    {:db (assoc-in db [:wallet/prepare-transaction :gasPrice] price)}))
+               (update tx-entry assoc
+                       :maxFeePerGas fee-cap
+                       :maxPriorityFeePerGas tip-cap)
+               (assoc :wallet/current-base-fee current-base-fee
+                      :wallet/normal-base-fee normal-base-fee
+                      :wallet/slow-base-fee slow-base-fee
+                      :wallet/fast-base-fee fast-base-fee
+                      :wallet/current-priority-fee max-priority-fee)
+               (assoc-in [:signing/edit-fee :gas-price-loading?] false))})
+    {:db (-> db
+             (assoc-in [:wallet/prepare-transaction :gasPrice] price)
+             (assoc-in [:signing/edit-fee :gas-price-loading?] false))}))
 
 (fx/defn set-max-amount
   {:events [:wallet.send/set-max-amount]}
   [{:keys [db]} {:keys [amount decimals symbol]}]
   (let [^js gas (money/bignumber 21000)
-        ^js gasPrice (get-in db [:wallet/prepare-transaction :gasPrice])
+        ^js gasPrice (or
+                      (get-in db [:wallet/prepare-transaction :maxFeePerGas])
+                      (get-in db [:wallet/prepare-transaction :gasPrice]))
         ^js fee (when gasPrice (.times gas gasPrice))
-        amount-text (if (= :INT symbol)
+        amount-text (if (= :ETH symbol)
                       (when (and fee (money/sufficient-funds? fee amount))
                         (str (wallet.utils/format-amount (.minus amount fee) decimals)))
                       (str (wallet.utils/format-amount amount decimals)))]
@@ -421,7 +492,7 @@
                ::json-rpc/call [{:method (json-rpc/call-ext-method "requestTransaction")
                                  :params [(:public-key to)
                                           amount
-                                          (when-not (= symbol :INT)
+                                          (when-not (= symbol :ETH)
                                             address)
                                           from-address]
                                  :js-response true
@@ -478,7 +549,9 @@
   {:events [::recipient-address-resolved]}
   [{:keys [db]} address]
   {:db (assoc-in db [:wallet/prepare-transaction :to :address] address)
-   :signing/update-gas-price {:success-event :wallet.send/update-gas-price-success
+   :signing/update-gas-price {:success-callback
+                              #(re-frame/dispatch
+                                [:wallet.send/update-gas-price-success :wallet/prepare-transaction %])
                               :network-id  (get-in (ethereum/current-network db)
                                                    [:config :NetworkId])}})
 
@@ -497,7 +570,7 @@
                         {:from (ethereum/get-default-account
                                 (:multiaccount/accounts db))
                          :to contact
-                         :symbol :INT
+                         :symbol :ETH
                          :from-chat? true})
              :dispatch [:open-modal :prepare-send-transaction]}
       ens-verified
@@ -519,7 +592,7 @@
                            (-> identity
                                contact.db/public-key->new-contact
                                contact.db/enrich-contact))
-                 :symbol :INT
+                 :symbol :ETH
                  :from-chat? true
                  :request-command? true})
      :dispatch [:open-modal :request-transaction]}))
@@ -530,10 +603,12 @@
   {:db (assoc db :wallet/prepare-transaction
               {:from       account
                :to         nil
-               :symbol     :INT
+               :symbol     :ETH
                :from-chat? false})
    :dispatch [:open-modal :prepare-send-transaction]
-   :signing/update-gas-price {:success-event :wallet.send/update-gas-price-success
+   :signing/update-gas-price {:success-callback
+                              #(re-frame/dispatch
+                                [:wallet.send/update-gas-price-success :wallet/prepare-transaction %])
                               :network-id  (get-in (ethereum/current-network db)
                                                    [:config :NetworkId])}})
 
@@ -962,3 +1037,9 @@
       {:method     "wallet_deletePendingTransaction"
        :params     [hash]
        :on-success #(log/info "[wallet] pending transaction deleted" hash)}))))
+
+(fx/defn switch-transactions-management-enabled
+  {:events [:multiaccounts.ui/switch-transactions-management-enabled]}
+  [{:keys [db]} enabled?]
+  {::async-storage/set! {:transactions-management-enabled? enabled?}
+   :db (assoc db :wallet/transactions-management-enabled? enabled?)})

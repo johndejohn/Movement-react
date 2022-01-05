@@ -284,10 +284,10 @@
   {:db (assoc-in db [:keycard :back-button-listener] listener)})
 
 (fx/defn show-wrong-keycard-alert
-  [_ card-connected?]
-  (when card-connected?
-    {:utils/show-popup {:title   (i18n/label :t/wrong-card)
-                        :content (i18n/label :t/wrong-card-text)}}))
+  [_]
+  (log/debug "show-wrong-keycard-alert")
+  {:utils/show-popup {:title   (i18n/label :t/wrong-card)
+                      :content (i18n/label :t/wrong-card-text)}})
 
 (fx/defn unauthorized-operation
   [cofx]
@@ -362,22 +362,24 @@
               (clear-on-card-read)
               (hide-connection-sheet))))
 
+(fx/defn blocked-or-frozen-keycard-popup
+  [{:keys [db] :as cofx} card-status]
+  (fx/merge
+   cofx
+   {:db (assoc-in db [:keycard :pin :status] card-status)}
+   (hide-connection-sheet)
+     ; do not try to display the popover if it is already open or
+     ; we are in the login interface (which has a different handling)
+   (when-not (or (:multiaccounts/login db) (:popover/popover db))
+     (popover/show-popover {:view card-status}))))
+
 (fx/defn blocked-keycard-popup
-  [{:keys [db] :as cofx}]
-  (fx/merge cofx
-            {:db (-> db
-                     (assoc-in [:keycard :pin :status] :blocked-card)
-                     (assoc :popover/popover {:view :blocked-card}))}
-            (hide-connection-sheet)))
+  [cofx]
+  (blocked-or-frozen-keycard-popup cofx :blocked-card))
 
 (fx/defn frozen-keycard-popup
-  [{:keys [db] :as cofx}]
-  (if (:multiaccounts/login db)
-    (fx/merge
-     cofx
-     {:db (assoc-in db [:keycard :pin :status] :frozen-card)}
-     hide-connection-sheet)
-    (popover/show-popover cofx {:view :frozen-card})))
+  [cofx]
+  (blocked-or-frozen-keycard-popup cofx :frozen-card))
 
 (fx/defn on-get-keys-error
   {:events [:keycard.callback/on-get-keys-error]}
@@ -403,7 +405,7 @@
          (when (zero? pin-retries-count) (frozen-keycard-popup))
          (when (= flow :import)
            (navigation/navigate-to-cofx :keycard-recovery-pin nil)))
-        (show-wrong-keycard-alert true)))))
+        (show-wrong-keycard-alert)))))
 
 (fx/defn factory-reset
   {:events [:keycard/factory-reset]}
@@ -473,7 +475,7 @@
                   (when (contains?
                          #{last-on-card-connected on-card-connected}
                          :keycard/prepare-to-sign)
-                    (show-wrong-keycard-alert true))
+                    (show-wrong-keycard-alert))
 
                   (when on-card-read
                     (dispatch-event on-card-read)))))))

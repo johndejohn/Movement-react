@@ -7,6 +7,7 @@
             [status-im.notifications.local :as local-notifications]
             [status-im.chat.models.message :as models.message]
             [status-im.chat.models.link-preview :as link.preview]
+            [status-im.visibility-status-updates.core :as visibility-status-updates]
             [status-im.utils.fx :as fx]
             [taoensso.timbre :as log]))
 
@@ -41,7 +42,14 @@
               {:db (assoc db
                           :peers-summary peers-summary
                           :peers-count peers-count)}
-              (mailserver/peers-summary-change previous-summary))))
+              (mailserver/peers-summary-change previous-summary)
+              (visibility-status-updates/peers-summary-change peers-count))))
+
+(fx/defn wakuv2-peer-stats
+  [{:keys [db]} peer-stats]
+  (let [previous-stats (:peer-stats db)]
+    {:db (assoc db :peer-stats peer-stats
+                :peers-count (count (:peers peer-stats)))}))
 
 (fx/defn process
   {:events [:signals/signal-received]}
@@ -59,6 +67,7 @@
       "message.delivered"  (let [{:keys [chatID messageID]} (js->clj event-js :keywordize-keys true)]
                              (models.message/update-db-message-status cofx chatID messageID :delivered))
       "discovery.summary"  (summary cofx (js->clj event-js :keywordize-keys true))
+      "wakuv2.peerstats"  (wakuv2-peer-stats cofx (js->clj event-js :keywordize-keys true))
       "subscriptions.data" (ethereum.subscriptions/handle-signal cofx (js->clj event-js :keywordize-keys true))
       "subscriptions.error" (ethereum.subscriptions/handle-error cofx (js->clj event-js :keywordize-keys true))
       "messages.new" (transport.message/sanitize-messages-and-process-response cofx event-js true)

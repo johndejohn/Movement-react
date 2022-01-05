@@ -12,8 +12,7 @@
     {:alias       alias
      :name        alias
      :identicon   (identicon/identicon public-key)
-     :public-key  public-key
-     :system-tags #{}}))
+     :public-key  public-key}))
 
 (defn public-key->contact
   [contacts public-key]
@@ -74,64 +73,39 @@
   (get-in db [:contacts/contacts public-key]))
 
 (defn added?
-  ([{:keys [system-tags]}]
-   (contains? system-tags :contact/added))
+  ([contact]
+   (:added contact))
   ([db public-key]
    (added? (get-in db [:contacts/contacts public-key]))))
 
 (defn blocked?
-  ([{:keys [system-tags]}]
-   (contains? system-tags :contact/blocked))
+  ([contact]
+   (:blocked contact))
   ([db public-key]
    (blocked? (get-in db [:contacts/contacts public-key]))))
-
-(defn pending?
-  "Check if this is a pending? contact, meaning one side sent a contact request
-  but the other didn't respond to it yet"
-  ([{:keys [system-tags] :as contact}]
-   (let [request-received? (contains? system-tags :contact/request-received)
-         added? (added? contact)]
-     (and (or request-received?
-              added?)
-          (not (and request-received? added?)))))
-  ([db public-key]
-   (pending? (get-in db [:contacts/contacts public-key]))))
-
-(defn legacy-pending?
-  "Would the :pending? field be true? for contacts sync payload sent to devices
-  running 0.11.0 or older?"
-  ([{:keys [system-tags] :as contact}]
-   (let [request-received? (contains? system-tags :contact/request-received)
-         added? (added? contact)]
-     (and request-received?
-          (not added?))))
-  ([db public-key]
-   (pending? (get-in db [:contacts/contacts public-key]))))
 
 (defn active?
   "Checks that the user is added to the contact and not blocked"
   ([contact]
-   (and (added? contact)
-        (not (blocked? contact))))
+   (and (:added contact)
+        (not (:blocked contact))))
   ([db public-key]
    (active? (get-in db [:contacts/contacts public-key]))))
 
 (defn enrich-contact
   ([contact] (enrich-contact contact nil nil))
-  ([{:keys [system-tags public-key] :as contact} setting own-public-key]
-   (let [added? (contains? system-tags :contact/added)]
-     (cond-> (-> contact
-                 (dissoc :ens-verified-at :ens-verification-retries)
-                 (assoc :pending? (pending? contact)
-                        :blocked? (blocked? contact)
-                        :active? (active? contact)
-                        :added? added?)
-                 (multiaccounts/contact-with-names))
-       (and setting (not= public-key own-public-key)
-            (or (= setting constants/profile-pictures-visibility-none)
-                (and (= setting constants/profile-pictures-visibility-contacts-only)
-                     (not added?))))
-       (dissoc :images)))))
+  ([{:keys [added public-key] :as contact} setting own-public-key]
+   (cond-> (-> contact
+               (dissoc :ens-verified-at :ens-verification-retries)
+               (assoc :blocked? (:blocked contact)
+                      :active? (active? contact)
+                      :added? added)
+               (multiaccounts/contact-with-names))
+     (and setting (not= public-key own-public-key)
+          (or (= setting constants/profile-pictures-visibility-none)
+              (and (= setting constants/profile-pictures-visibility-contacts-only)
+                   (not added))))
+     (dissoc :images))))
 
 (defn enrich-contacts
   [contacts profile-pictures-visibility own-public-key]
@@ -143,7 +117,7 @@
 (defn get-blocked-contacts
   [contacts]
   (reduce (fn [acc {:keys [public-key] :as contact}]
-            (if (blocked? contact)
+            (if (:blocked contact)
               (conj acc public-key)
               acc))
           #{}

@@ -1,8 +1,7 @@
 (ns status-im.ui.screens.chat.message.styles
   (:require [quo.design-system.colors :as colors]
             [status-im.ui.components.react :as react]
-            [status-im.ui.screens.chat.styles.photos :as photos]
-            [status-im.ui.components.colors :as components.colors]))
+            [status-im.ui.screens.chat.styles.photos :as photos]))
 
 (defn picker-wrapper-style [{:keys [display-photo? outgoing timeline]}]
   (merge {:flex-direction :row
@@ -35,11 +34,19 @@
    :padding-vertical   8
    :padding-horizontal 8})
 
-(defn quick-actions-row []
-  {:flex-direction   :row
+(defn quick-actions-container []
+  {:flex-direction   :column
    :justify-content  :space-evenly
    :border-top-width 1
    :border-top-color (:ui-01 @colors/theme)})
+
+(defn quick-actions-row []
+  {:flex-direction     :row
+   :padding-horizontal 16
+   :padding-vertical   12
+   :justify-content    :space-between
+   :border-top-width   1
+   :border-top-color   (:ui-01 @colors/theme)})
 
 (defn reaction-style [{:keys [outgoing own]}]
   (merge {:border-top-left-radius     10
@@ -94,7 +101,7 @@
 (defn link-preview-request-wrapper []
   {:border-radius    16
    :border-width     1
-   :border-color     components.colors/gray-lighter
+   :border-color     colors/gray-lighter
    :margin-vertical  4
    :background-color (:ui-background @colors/theme)})
 
@@ -113,7 +120,8 @@
    :border-bottom-left-radius  (if timeline 16 (if outgoing 16 4))
    :border-bottom-right-radius (if timeline 16 (if outgoing 4 16))
    :border-width               1
-   :border-color               components.colors/gray-lighter
+   :border-color               colors/gray-lighter
+   :background-color           colors/white
    :margin-vertical            4})
 
 (def screen-width

@@ -13,7 +13,7 @@
 (fx/defn navigate-chat-updated
   {:events [:navigate-chat-updated]}
   [cofx chat-id]
-  (when (get-in cofx [:db :chats chat-id :is-active])
+  (when (get-in cofx [:db :chats chat-id])
     (fx/merge cofx
               {:dispatch-later [{:ms 1000 :dispatch [:chat.ui/navigate-to-chat chat-id]}]}
               (navigation/pop-to-root-tab :chat-stack))))
@@ -59,8 +59,9 @@
 
 (fx/defn create-from-link
   [cofx {:keys [chat-id invitation-admin chat-name]}]
-  (if (get-in cofx [:db :chats chat-id :is-active])
-    (models.chat/navigate-to-chat cofx chat-id)
+  (if (get-in cofx [:db :chats chat-id])
+    {:dispatch-n [[:accept-all-activity-center-notifications-from-chat chat-id]
+                  [:chat.ui/navigate-to-chat chat-id false]]}
     {::json-rpc/call [{:method     (json-rpc/call-ext-method "createGroupChatFromInvitation")
                        :params     [chat-name chat-id invitation-admin]
                        :js-response true
@@ -209,11 +210,12 @@
 
 (fx/defn ui-leave-chat-pressed
   {:events [:group-chats.ui/leave-chat-pressed]}
-  [_ chat-id]
-  {:ui/show-confirmation
-   {:title               (i18n/label :t/leave-confirmation)
-    :content             (i18n/label :t/leave-chat-confirmation)
-    :confirm-button-text (i18n/label :t/leave)
-    :on-accept           #(do
-                            (re-frame/dispatch [:bottom-sheet/hide])
-                            (re-frame/dispatch [:group-chats.ui/leave-chat-confirmed chat-id]))}})
+  [{:keys [db]} chat-id]
+  (let [chat-name (get-in db [:chats chat-id :name])]
+    {:ui/show-confirmation
+     {:title               (i18n/label :t/leave-confirmation {:chat-name chat-name})
+      :content             (i18n/label :t/leave-chat-confirmation)
+      :confirm-button-text (i18n/label :t/leave)
+      :on-accept           #(do
+                              (re-frame/dispatch [:bottom-sheet/hide])
+                              (re-frame/dispatch [:group-chats.ui/leave-chat-confirmed chat-id]))}}))

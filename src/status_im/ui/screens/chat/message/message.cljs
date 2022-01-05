@@ -3,7 +3,7 @@
             [status-im.constants :as constants]
             [status-im.i18n.i18n :as i18n]
             [status-im.react-native.resources :as resources]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.icons.icons :as icons]
             [status-im.ui.components.react :as react]
             [status-im.ui.screens.chat.message.audio :as message.audio]
@@ -19,6 +19,7 @@
             [status-im.ui.screens.chat.message.reactions :as reactions]
             [status-im.ui.screens.chat.image.preview.views :as preview]
             [quo.core :as quo]
+            [status-im.utils.config :as config]
             [reagent.core :as reagent]
             [status-im.ui.screens.chat.components.reply :as components.reply]
             [status-im.ui.screens.chat.message.link-preview :as link-preview]
@@ -323,7 +324,9 @@
         (when (not= (/ width k) (first @dimensions))
           (reset! dimensions [(/ width k) image-max-height]))))))
 
-(defn message-content-image [{:keys [content outgoing in-popover?] :as message} {:keys [on-long-press]}]
+(defn message-content-image
+  [{:keys [content outgoing in-popover?] :as message}
+   {:keys [on-long-press]}]
   (let [dimensions (reagent/atom [image-max-width image-max-height])
         visible (reagent/atom false)
         uri (:image content)]
@@ -350,7 +353,7 @@
             [react/view {:style (style/image-message-border style-opts)}]]]]]))))
 
 (defmulti ->message :content-type)
- 
+
 (defmethod ->message constants/content-type-command
   [message]
   [message.command/command-content message-content-wrapper message])
@@ -384,16 +387,25 @@
    (concat
     (when (and outgoing edit-enabled)
       [{:on-press #(re-frame/dispatch [:chat.ui/edit-message message])
-        :label (i18n/label :t/edit)}])
+        :label    (i18n/label :t/edit)
+        :id       :edit}])
     (when show-input?
       [{:on-press #(re-frame/dispatch [:chat.ui/reply-to-message message])
-        :label    (i18n/label :t/message-reply)}])
+        :label    (i18n/label :t/message-reply)
+        :id       :reply}])
     [{:on-press #(react/copy-to-clipboard
                   (components.reply/get-quoted-text-with-mentions
                    (get content :parsed-text)))
-      :label    (i18n/label :t/sharing-copy-to-clipboard)}]
-    (when message-pin-enabled [{:on-press #(pin-message message)
-                                :label    (if pinned (i18n/label :t/unpin) (i18n/label :t/pin))}]))))
+      :label    (i18n/label :t/sharing-copy-to-clipboard)
+      :id       :copy}]
+    (when message-pin-enabled
+      [{:on-press #(pin-message message)
+        :label    (if pinned (i18n/label :t/unpin) (i18n/label :t/pin))
+        :id       (if pinned :unpin :pin)}])
+    (when (and outgoing config/delete-message-enabled?)
+      [{:on-press #(re-frame/dispatch [:chat.ui/soft-delete-message message])
+        :label    (i18n/label :t/delete)
+        :id       :delete}]))))
 
 (defn collapsible-text-message [{:keys [mentioned]} _]
   (let [collapsed?   (reagent/atom false)
@@ -405,14 +417,15 @@
                            message-height-px))]
         [react/touchable-highlight
          (when-not modal
-           {:on-press      (fn [_]
-                             (react/dismiss-keyboard!))
-            :on-long-press (fn []
-                             (if @collapsed?
-                               (do (reset! collapsed? false)
-                                   (js/setTimeout #(on-long-press-fn on-long-press message content) 200))
-                               (on-long-press-fn on-long-press message content)))
-            :disabled       in-popover?})
+           {:on-press         (fn [_]
+                                (react/dismiss-keyboard!))
+            :delay-long-press 100
+            :on-long-press    (fn []
+                                (if @collapsed?
+                                  (do (reset! collapsed? false)
+                                      (js/setTimeout #(on-long-press-fn on-long-press message content) 200))
+                                  (on-long-press-fn on-long-press message content)))
+            :disabled         in-popover?})
          [react/view {:style (style/message-view message)}
           [react/view {:style      (style/message-view-content)
                        :max-height max-height}
@@ -477,12 +490,15 @@
                                   {:disabled      in-popover?
                                    :on-press      (fn []
                                                     (react/dismiss-keyboard!))
+                                   :delay-long-press 100
                                    :on-long-press (fn []
                                                     (on-long-press
                                                      (concat
                                                       [{:on-press #(re-frame/dispatch [:chat.ui/reply-to-message message])
+                                                        :id       :reply
                                                         :label    (i18n/label :t/message-reply)}
                                                        {:on-press #(react/copy-to-clipboard (get content :text))
+                                                        :id       :copy
                                                         :label    (i18n/label :t/sharing-copy-to-clipboard)}]
                                                       (when message-pin-enabled [{:on-press #(pin-message message)
                                                                                   :label    (if pinned (i18n/label :t/unpin) (i18n/label :t/pin))}]))))})
@@ -510,6 +526,7 @@
                                                           (when pack
                                                             (re-frame/dispatch [:stickers/open-sticker-pack pack]))
                                                           (react/dismiss-keyboard!))
+                                   :delay-long-press 100
                                    :on-long-press       (fn []
                                                           (on-long-press
                                                            (when-not outgoing
@@ -526,11 +543,14 @@
   [message-content-wrapper message
    [message-content-image message {:modal         modal
                                    :disabled      in-popover?
+                                   :delay-long-press 100
                                    :on-long-press (fn []
                                                     (on-long-press
                                                      [{:on-press #(re-frame/dispatch [:chat.ui/reply-to-message message])
+                                                       :id       :reply
                                                        :label    (i18n/label :t/message-reply)}
                                                       {:on-press #(re-frame/dispatch [:chat.ui/save-image-to-gallery (:image content)])
+                                                       :id       :save
                                                        :label    (i18n/label :t/save)}]))}]
    reaction-picker])
 

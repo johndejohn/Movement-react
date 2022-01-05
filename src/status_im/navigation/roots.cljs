@@ -1,5 +1,5 @@
 (ns status-im.navigation.roots
-  (:require [status-im.ui.components.colors :as colors]
+  (:require [quo.design-system.colors :as colors]
             [status-im.utils.platform :as platform]
             [status-im.ui.components.icons.icons :as icons]
             [status-im.ui.screens.views :as views]))
@@ -68,6 +68,7 @@
      {:id       :tabs-stack
       :options  (merge (default-root)
                        {:bottomTabs {:titleDisplayMode :alwaysHide
+                                     :tabsAttachMode :onSwitchToTab
                                      :backgroundColor  colors/white}})
       :children [;CHAT STACK
                  {:stack {:id       :chat-stack

@@ -1,8 +1,7 @@
 (ns status-im.ethereum.core
   (:require [clojure.string :as string]
-            [status-im.ethereum.tokens :as tokens]
-            [status-im.utils.money :as money]
-            ["web3-utils" :as utils]))
+            ["web3-utils" :as utils]
+            [status-im.ethereum.eip55 :as eip55]))
 
 (defn sha3 [s]
   (when s
@@ -39,6 +38,11 @@
 (defn chain-keyword->chain-id [k]
   (get-in chains [k :id]))
 
+(defn chain-keyword->snt-symbol [k]
+  (case k
+    :mainnet :SNT
+    :STT))
+
 (defn testnet? [id]
   (contains? #{(chain-keyword->chain-id :testnet)
                (chain-keyword->chain-id :rinkeby)
@@ -70,6 +74,11 @@
   (-> (get db :multiaccount/accounts)
       get-default-account
       :address))
+
+(defn addresses-without-watch [db]
+  (into #{}
+        (remove #(= (:type %) :watch)
+                (map #(eip55/address->checksum (:address %)) (get db :multiaccount/accounts)))))
 
 (defn naked-address [s]
   (when s
@@ -120,17 +129,7 @@
   (network->chain-id (get networks current-network)))
 
 (defn snt-symbol [db]
-  (case (chain-keyword db)
-    :mainnet :SNT
-    :STT))
-
-(def default-transaction-gas (money/bignumber 21000))
-
-(defn estimate-gas [symbol]
-  (if (tokens/ethereum? symbol)
-    default-transaction-gas
-    ;; TODO(jeluard) Rely on estimateGas call
-    (.times ^js default-transaction-gas 5)))
+  (chain-keyword->snt-symbol (chain-keyword db)))
 
 (defn address= [address1 address2]
   (and address1 address2

@@ -6,18 +6,20 @@
             [status-im.i18n.i18n :as i18n]
             [status-im.ui.screens.wallet.buy-crypto.views :as buy-crypto]
             [status-im.ui.components.chat-icon.screen :as chat-icon]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.icons.icons :as icons]
-            [status-im.ui.components.list.views :as list]
             [status-im.ui.components.react :as react]
             [status-im.ui.screens.wallet.accounts.sheets :as sheets]
             [status-im.ui.screens.wallet.accounts.styles :as styles]
             [status-im.qr-scanner.core :as qr-scanner]
             [status-im.wallet.utils :as wallet.utils]
-            [status-im.keycard.login :as keycard.login])
+            [status-im.keycard.login :as keycard.login]
+            [quo.react-native :as rn]
+            [status-im.utils.utils :as utils.utils]
+            [status-im.ui.screens.wallet.components.views :as wallet.components])
   (:require-macros [status-im.utils.views :as views]))
 
-(views/defview account-card [{:keys [name color address type] :as account} keycard? card-width]
+(views/defview account-card [{:keys [name color address type wallet] :as account} keycard? card-width]
   (views/letsubs [currency        [:wallet/currency]
                   portfolio-value [:account-portfolio-value address]
                   prices-loading? [:prices-loading?]]
@@ -48,7 +50,7 @@
        [react/touchable-highlight
         {:style styles/card-icon-more
          :on-press #(re-frame/dispatch [:bottom-sheet/show-sheet
-                                        {:content        (fn [] [sheets/account-card-actions account type])
+                                        {:content        (fn [] [sheets/account-card-actions account type wallet])
                                          :content-height 130}])}
         [icons/icon :main-icons/more {:color colors/white-persist}]]]]]))
 
@@ -73,9 +75,9 @@
                                      :weight :inherit}
                            (wallet.utils/display-symbol token)]]
     :subtitle            (str (if value value "...") " " currency)
-    :accessibility-label (str (:symbol token)  "-asset-value")
+    :accessibility-label (str (:symbol token) "-asset-value")
     :icon                (if icon
-                           [list/item-image icon]
+                           [wallet.components/token-icon icon]
                            [chat-icon/custom-icon-view-list (:name token) color])}])
 
 (views/defview assets []
@@ -107,7 +109,7 @@
      [dot {:selected (= selected i)}])])
 
 (views/defview accounts []
-  (views/letsubs [accounts [:multiaccount/accounts]
+  (views/letsubs [accounts [:multiaccount/visible-accounts]
                   keycard? [:keycard-multiaccount?]
                   window-width [:dimensions/window-width]
                   index (reagent/atom 0)]
@@ -190,21 +192,48 @@
         [quo/text {:color :secondary}
          (i18n/label :t/wallet-total-value)]])]))
 
+;; Note(rasom): sometimes `refreshing` might get stuck on iOS if action happened
+;; too fast. By updating this atom in 1s we ensure that `refreshing?` property
+;; is updated properly in this case.
+(def updates-counter (reagent/atom 0))
+
+(defn schedule-counter-reset []
+  (utils.utils/set-timeout
+   (fn []
+     (swap! updates-counter inc)
+     (when @(re-frame/subscribe [:wallet/refreshing-history?])
+       (schedule-counter-reset)))
+   1000))
+
+(defn refresh-action []
+  (schedule-counter-reset)
+  (re-frame/dispatch [:wallet.ui/pull-to-refresh-history]))
+
+(defn refresh-control [refreshing?]
+  (reagent/as-element
+   [rn/refresh-control
+    {:refreshing (boolean refreshing?)
+     :onRefresh  refresh-action}]))
+
 (defn accounts-overview []
   (let [mnemonic @(re-frame/subscribe [:mnemonic])]
-    [react/view {:flex 1}
+    [react/view
+     {:style {:flex 1}}
      [quo/animated-header
-      {:extended-header   total-value
-       :use-insets        true
-       :right-accessories [{:on-press            #(re-frame/dispatch
-                                                   [::qr-scanner/scan-code
-                                                    {:handler :wallet.send/qr-scanner-result}])
-                            :icon                :main-icons/qr
-                            :accessibility-label :accounts-qr-code}
-                           {:on-press            #(re-frame/dispatch [:bottom-sheet/show-sheet
-                                                                      {:content (sheets/accounts-options mnemonic)}])
-                            :icon                :main-icons/more
-                            :accessibility-label :accounts-more-options}]}
+      {:extended-header    total-value
+       :refresh-control    refresh-control
+       :refreshing-sub     (re-frame/subscribe [:wallet/refreshing-history?])
+       :refreshing-counter updates-counter
+       :use-insets         true
+       :right-accessories  [{:on-press            #(re-frame/dispatch
+                                                    [::qr-scanner/scan-code
+                                                     {:handler :wallet.send/qr-scanner-result}])
+                             :icon                :main-icons/qr
+                             :accessibility-label :accounts-qr-code}
+                            {:on-press            #(re-frame/dispatch [:bottom-sheet/show-sheet
+                                                                       {:content (sheets/accounts-options mnemonic)}])
+                             :icon                :main-icons/more
+                             :accessibility-label :accounts-more-options}]}
       [accounts]
       [buy-crypto/banner]
       [assets]

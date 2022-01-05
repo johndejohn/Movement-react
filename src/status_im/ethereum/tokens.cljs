@@ -7,7 +7,7 @@
   (memoize
    (fn []
      {:name     "Native"
-      :symbol   :INT
+      :symbol   :ETH
       :decimals 18
       :icon     {:source (js/require "../resources/images/tokens/default-native.png")}})))
 
@@ -15,25 +15,23 @@
 
 (def all-native-currencies
   (ethereum.macros/resolve-native-currency-icons
-   {:mainnet {:name     "Inter"
-              :symbol   :INT
+   {:mainnet {:name     "Ether"
+              :symbol   :ETH
               :decimals 18}
-    :testnet {:name           "Ropsten Inter"
-              :symbol         :INT
-
-              :symbol-display :INTro
+    :testnet {:name           "Ropsten Ether"
+              :symbol         :ETH
+              :symbol-display :ETHro
               :decimals       18}
-    :rinkeby {:name           "Rinkeby Inter"
-              :symbol         :INT
-              :symbol-display :INTri
-
+    :rinkeby {:name           "Rinkeby Ether"
+              :symbol         :ETH
+              :symbol-display :ETHri
               :decimals       18}
     :poa     {:name           "POA"
-              :symbol         :INT
+              :symbol         :ETH
               :symbol-display :POA
               :decimals       18}
     :xdai    {:name            "xDAI"
-              :symbol          :INT
+              :symbol          :ETH
               :symbol-display  :xDAI
               :symbol-exchange :DAI
               :decimals        18}}))
@@ -145,8 +143,8 @@
                     :name     "Raiden Token"
                     :address  "0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6"
                     :decimals 18}
-                   {:symbol   :MNT
-                    :name     "Movement Network Token"
+                   {:symbol   :SNT
+                    :name     "Status Network Token"
                     :address  "0x744d70fdbe2ba4cf95131626614a1763df805b9e"
                     :decimals 18}
                    {:symbol   :SNGLS
@@ -229,8 +227,8 @@
                     :name     "Zeus Shield Coin"
                     :address  "0x7a41e0517a5eca4fdbc7fbeba4d4c47b9ff6dc63"
                     :decimals 18}
-                   {:symbol   :DATA
-                    :name     "Streamr DATAcoin"
+                   {:symbol   :XDATA
+                    :name     "Streamr (old)"
                     :address  "0x0cf0ee63788a0849fe5297f3407f701e122cc023"
                     :decimals 18}
                    {:symbol   :RCN
@@ -528,8 +526,8 @@
                     :name     "Numeraire"}
                    {:address  "0x8E870D67F660D95d5be530380D0eC0bd388289E1"
                     :decimals 18
-                    :symbol   :PAX
-                    :name     "Paxos Standard"}
+                    :symbol   :USDP
+                    :name     "Pax Dollar"}
                    {:address  "0xEA26c4aC16D4a5A106820BC8AEE85fd0b7b2b664"
                     :decimals 18
                     :symbol   :QKC
@@ -765,11 +763,15 @@
                    {:address  "0xaa6e8127831c9de45ae56bb1b0d4d4da6e5665bd"
                     :symbol   :ETH2x-FLI
                     :name     "ETH 2x Flexible Leverage Index"
+                    :decimals 18}
+                   {:address  "0xba5BDe662c17e2aDFF1075610382B9B691296350"
+                    :symbol   :RARE
+                    :name     "SuperRare"
                     :decimals 18}])
    :testnet
    (resolve-icons :testnet
-                  [{:name     "Movement Test Token"
-                    :symbol   :MTT
+                  [{:name     "Status Test Token"
+                    :symbol   :STT
                     :decimals 18
                     ;;NOTE(goranjovic): intentionally checksummed for purposes of testing
                     :address  "0xc55cf4b03948d7ebc8b9e8bad92643703811d162"}
@@ -808,8 +810,8 @@
                     :name     "WIBB"
                     :address  "0x7d4ccf6af2f0fdad48ee7958bcc28bdef7b732c7"
                     :decimals 18}
-                   {:name     "Movement Test Token"
-                    :symbol   :MTT
+                   {:name     "Status Test Token"
+                    :symbol   :STT
                     :decimals 18
                     :address  "0xc55cf4b03948d7ebc8b9e8bad92643703811d162"}])
 

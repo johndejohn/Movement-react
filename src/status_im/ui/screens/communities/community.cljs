@@ -4,16 +4,18 @@
             [status-im.ui.components.toolbar :as toolbar]
             [quo.core :as quo]
             [status-im.constants :as constants]
+            [status-im.chat.models.link-preview :as link-preview]
             [status-im.utils.handlers :refer [>evt <sub]]
             [status-im.i18n.i18n :as i18n]
             [status-im.utils.datetime :as datetime]
             [status-im.communities.core :as communities]
             [status-im.ui.components.list.views :as list]
+            [status-im.ui.components.react :as components.react]
             [status-im.ui.screens.home.views.inner-item :as inner-item]
             [status-im.ui.screens.chat.photos :as photos]
             [status-im.react-native.resources :as resources]
             [status-im.ui.components.chat-icon.screen :as chat-icon.screen]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.icons.icons :as icons]
             [status-im.utils.core :as utils]
             [status-im.ui.components.plus-button :as components.plus-button]
@@ -117,6 +119,12 @@
                     true
                     name
                     (or color (rand-nth colors/chat-colors))])}]
+     [quo/list-item
+      {:theme               :accent
+       :title               (i18n/label :t/mark-all-read)
+       :accessibility-label :mark-all-read-button
+       :icon                :main-icons/check
+       :on-press            #(hide-sheet-and-dispatch [:chat.ui/mark-all-read-in-community-pressed id])}]
      (when can-manage-users?
        [:<>
         [quo/list-item
@@ -131,7 +139,14 @@
           :title               (i18n/label :t/edit-chats)
           :accessibility-label :community-edit-chats
           :icon                :main-icons/edit
-          :on-press            #(hide-sheet-and-dispatch [:open-modal :community-edit-chats {:community-id id}])}]])]))
+          :on-press            #(hide-sheet-and-dispatch [:open-modal :community-edit-chats {:community-id id}])}]
+        [quo/list-item
+         {:theme               :accent
+          :title               (i18n/label :t/reorder-categories)
+          :accessibility-label :community-reorder-categories
+          :icon                :main-icons/channel-category
+          :on-press            #(hide-sheet-and-dispatch
+                                 [:open-modal :community-reorder-categories {:community-id id}])}]])]))
 
 (defn blank-page [text]
   [rn/view {:style {:padding 16 :flex 1 :flex-direction :row :align-items :center :justify-content :center}}
@@ -139,35 +154,37 @@
               :color :secondary}
     text]])
 
-(defn community-chat-item [{:keys [chat-id] :as home-item}]
+(defn community-chat-item [{:keys [chat-id] :as home-item} _ _ {:keys [from-chat]}]
   [inner-item/home-list-item
    ;; We want communities to behave as public chats when it comes to
    ;; unread indicator
    (assoc home-item :public? true)
    {:on-press      (fn []
-                     (re-frame/dispatch [:pop-to-root-tab :chat-stack])
                      (re-frame/dispatch [:dismiss-keyboard])
-                     (re-frame/dispatch [:chat.ui/navigate-to-chat chat-id])
+                     (re-frame/dispatch [:chat.ui/navigate-to-chat chat-id (not from-chat)])
                      (re-frame/dispatch [:search/home-filter-changed nil])
                      (re-frame/dispatch [:accept-all-activity-center-notifications-from-chat chat-id]))
     :on-long-press #(re-frame/dispatch [:bottom-sheet/show-sheet
                                         {:content (fn []
                                                     [sheets/actions home-item])}])}])
 
-(defn categories-accordion [community-id chats categories edit]
-  [rn/view {:padding-bottom 8}
-   (for [{:keys [name id]} (vals categories)]
+(defn categories-accordion [community-id chats categories edit data]
+  [:<>
+   (for [{:keys [name id state]} (vals categories)]
      ^{:key (str "cat" name id)}
      [:<>
       [accordion/section
-       {:opened   edit
+       {:on-open  #(>evt [::communities/store-category-state community-id id true])
+        :on-close #(>evt [::communities/store-category-state community-id id false])
+        :default  state
+        :opened   edit
         :disabled edit
         :title    [rn/view styles/category-item
                    (if edit
                      [rn/touchable-opacity {:on-press #(>evt [:delete-community-category community-id id])}
                       [icons/icon :main-icons/delete-circle {:no-color true}]]
                      [icons/icon :main-icons/channel-category {:color colors/gray}])
-                   [rn/text {:style {:font-size 17 :margin-left 10}} name]]
+                   [rn/text {:style {:font-size 17 :margin-left 10 :color colors/black}} name]]
         :content  [rn/view
                    (for [chat (get chats id)]
                      (if edit
@@ -182,24 +199,27 @@
                          [inner-item/home-list-item
                           (assoc chat :public? true)]]]
                        ^{:key (str "chat" chat id)}
-                       [community-chat-item chat]))]}]
+                       [community-chat-item chat nil nil data]))]}]
       [quo/separator]])])
 
-(defn community-chat-list [community-id categories edit]
+(defn community-chat-list [community-id categories edit from-chat]
   (let [chats (<sub [:chats/categories-by-community-id community-id])]
     (if (and (empty? categories) (empty? chats))
-      [blank-page (i18n/label :t/welcome-community-blank-message)]
+      (if edit
+        [blank-page (i18n/label :t/welcome-community-blank-message-edit-chats)]
+        [blank-page (i18n/label :t/welcome-community-blank-message)])
       [list/flat-list
        {:key-fn                       :chat-id
         :content-container-style      {:padding-bottom 8}
         :keyboard-should-persist-taps :always
         :data                         (get chats "")
+        :render-data                  {:from-chat from-chat}
         :render-fn                    community-chat-item
-        :header                       [categories-accordion community-id chats categories edit]
+        :header                       [categories-accordion community-id chats categories edit {:from-chat from-chat}]
         :footer                       [rn/view {:height 68}]}])))
 
-(defn channel-preview-item [{:keys [id color name]}]
-  (let [color (or color colors/default-community-color)]
+(defn channel-preview-item [{:keys [id name]}]
+  (let [color colors/default-community-color]
     [quo/list-item
      {:icon                      [chat-icon.screen/chat-icon-view-chat-list
                                   id true name color false false]
@@ -234,15 +254,24 @@
       :data                         chats
       :render-fn                    channel-preview-item}]))
 
-(defn unknown-community []
-  [rn/view {:style {:flex 1}}
-   [topbar/topbar {:title  (i18n/label :t/not-found)}]
-   [blank-page (i18n/label :t/community-info-not-found)]])
+(defn unknown-community [community-id]
+  (let [fetching (<sub [:communities/fetching-community community-id])]
+    [:<> {:style {:flex 1}}
+     [topbar/topbar {:title  (if fetching (i18n/label :t/fetching-community) (i18n/label :t/not-found))}]
+     [rn/view {:style {:padding 16 :flex 1 :flex-direction :row :align-items :center :justify-content :center}}
+
+      [quo/button {:on-press (when-not fetching #(>evt [::link-preview/resolve-community-info community-id]))
+                   :disabled fetching
+                   :color :secondary}
+       (if fetching
+         [components.react/small-loading-indicator]
+         (i18n/label :t/fetch-community))]]]))
 
 (defn community-edit []
   (let [{:keys [community-id]} (<sub [:get-screen-params])]
     (fn []
-      (let [{:keys [id name images members permissions color categories]} (<sub [:communities/community community-id])]
+      (let [{:keys [id name images members permissions color]} (<sub [:communities/community community-id])
+            categories (<sub [:communities/sorted-categories community-id])]
         [:<>
          [topbar/topbar
           {:modal?  true
@@ -253,14 +282,15 @@
                      images
                      (not= (:access permissions) constants/community-no-membership-access)
                      (count members)]}]
-         [community-chat-list id categories true]]))))
+         [community-chat-list id categories true false]]))))
 
 (defn community []
-  (let [{:keys [community-id]} (<sub [:get-screen-params])]
+  (let [{:keys [community-id from-chat]} (<sub [:get-screen-params])]
     (fn []
-      (let [{:keys [id chats name images members permissions color joined can-request-access?
-                    can-join? requested-to-join-at admin categories]
-             :as   community}      (<sub [:communities/community community-id])]
+      (let [{:keys [id chats name images members permissions color joined
+                    can-request-access? can-join? requested-to-join-at admin]
+             :as   community} (<sub [:communities/community community-id])
+            categories        (<sub [:communities/sorted-categories community-id])]
         (if community
           [rn/view {:style {:flex 1}}
            [topbar/topbar
@@ -280,7 +310,7 @@
                                    {:content (fn []
                                                [community-actions community])}])}])}]
            (if joined
-             [community-chat-list id categories false]
+             [community-chat-list id categories false from-chat]
              [community-channel-preview-list id chats])
            (when admin
              [components.plus-button/plus-button
@@ -313,4 +343,4 @@
                  :center       [quo/button {:on-press #(>evt [::communities/join id])
                                             :type     :secondary}
                                 (i18n/label :t/follow)]}]))]
-          [unknown-community])))))
+          [unknown-community community-id])))))

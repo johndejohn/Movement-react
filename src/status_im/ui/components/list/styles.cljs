@@ -1,5 +1,5 @@
 (ns status-im.ui.components.list.styles
-  (:require [status-im.ui.components.colors :as colors]
+  (:require [quo.design-system.colors :as colors]
             [status-im.utils.styles :as styles]))
 
 (def item
@@ -17,19 +17,6 @@
    :flex-direction  :column
    :align-items     :center
    :justify-content :center})
-
-(def primary-text-base
-  {:font-size 16})
-
-(def primary-text-only
-  (merge primary-text-base
-         {:padding-vertical 16}))
-
-(def image-size 40)
-
-(def item-image
-  {:width         image-size
-   :height        image-size})
 
 (def icon-size 24)
 (def icon-wrapper-size (+ icon-size (* 2 8)))

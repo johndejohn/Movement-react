@@ -17,6 +17,7 @@
             [status-im.utils.utils :as utils]
             [status-im.ethereum.json-rpc :as json-rpc]
             [status-im.anon-metrics.core :as anon-metrics]
+            [status-im.utils.universal-links.core :as universal-links]
             clojure.set
             status-im.currency.core
             status-im.navigation
@@ -26,6 +27,8 @@
             status-im.wallet.choose-recipient.core
             status-im.wallet.accounts.core
             status-im.popover.core
+            status-im.visibility-status-popover.core
+            status-im.visibility-status-updates.core
             status-im.bottom-sheet.core
             status-im.add-new.core
             status-im.search.core
@@ -144,6 +147,9 @@
                        (assoc :app-active-since now))}
               (mailserver/process-next-messages-request)
               (wallet/restart-wallet-service-after-background app-in-background-since)
+              (universal-links/process-stored-event)
+              #(when-let [chat-id (:current-chat-id db)]
+                 {:dispatch [:chat/mark-all-as-read chat-id]})
               #(when requires-bio-auth
                  (biometric/authenticate % on-biometric-auth-result authentication-options)))))
 

@@ -6,9 +6,7 @@
             [status-im.utils.fx :as fx]
             [taoensso.timbre :as log]
             [status-im.keycard.common :as common]
-            [status-im.native-module.core :as native-module]
-            [status-im.utils.types :as types]
-            [clojure.string :as string]))
+            [status-im.multiaccounts.key-storage.core :as key-storage]))
 
 (fx/defn unpair-card-pressed
   {:events [:keycard-settings.ui/unpair-card-pressed]}
@@ -23,16 +21,14 @@
 (fx/defn unpair-card-confirmed
   {:events [:keycard-settings.ui/unpair-card-confirmed]}
   [{:keys [db] :as cofx}]
-  (let [pin-retry-counter (get-in db [:keycard :application-info :pin-retry-counter])
-        enter-step (if (zero? pin-retry-counter) :puk :current)]
-    (fx/merge cofx
-              {:db (assoc-in db [:keycard :pin] {:enter-step  enter-step
-                                                 :current     []
-                                                 :puk         []
-                                                 :status      nil
-                                                 :error-label nil
-                                                 :on-verified :keycard/unpair})}
-              (common/navigate-to-enter-pin-screen))))
+  (fx/merge cofx
+            {:db (assoc-in db [:keycard :pin] {:enter-step  :current
+                                               :current     []
+                                               :puk         []
+                                               :status      nil
+                                               :error-label nil
+                                               :on-verified :keycard/unpair})}
+            (common/navigate-to-enter-pin-screen)))
 
 (fx/defn unpair
   {:events [:keycard/unpair]}
@@ -127,16 +123,12 @@
                :keycard/persist-pairings (dissoc pairings (keyword instance-uid))
                :utils/show-popup   {:title   (i18n/label (if keys-removed-from-card? :t/profile-deleted-title :t/database-reset-title))
                                     :content (i18n/label (if keys-removed-from-card? :t/profile-deleted-keycard :t/database-reset-content))
-                                    :on-dismiss #(re-frame/dispatch [:logout])}}
+                                    :on-dismiss #(re-frame/dispatch [:logout])}
+               ::key-storage/delete-multiaccount {:key-uid    key-uid
+                                                  :on-success #(log/debug "[keycard] remove account ok")
+                                                  :on-error   #(log/warn "[keycard] remove account: " %)}}
               (common/clear-on-card-connected)
-              (common/hide-connection-sheet)
-              (native-module/delete-multiaccount
-               key-uid
-               (fn [result]
-                 (let [{:keys [error]} (types/json->clj result)]
-                   (if-not (string/blank? error)
-                     (log/warn "[keycard] remove account: " error)
-                     (log/debug "[keycard] remove account ok"))))))))
+              (common/hide-connection-sheet))))
 
 (fx/defn on-remove-key-success
   {:events [:keycard.callback/on-remove-key-success]}
@@ -153,7 +145,7 @@
                 (fx/merge cofx
                           {:db (assoc-in db [:keycard :pin :status] nil)}
                           (common/set-on-card-connected :keycard/remove-key-with-unpair))
-                (common/show-wrong-keycard-alert true)))))
+                (common/show-wrong-keycard-alert)))))
 
 (fx/defn on-unpair-and-delete-success
   {:events [:keycard.callback/on-unpair-and-delete-success]}
@@ -170,4 +162,4 @@
                 (fx/merge cofx
                           {:db (assoc-in db [:keycard :pin :status] nil)}
                           (common/set-on-card-connected :keycard/unpair-and-delete))
-                (common/show-wrong-keycard-alert true)))))
+                (common/show-wrong-keycard-alert)))))

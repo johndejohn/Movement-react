@@ -25,10 +25,6 @@
 (defn- find-address-name [db address]
   (:name (contact.db/find-contact-by-address (:contacts/contacts db) address)))
 
-(defn use-default-eth-gas [fx]
-  (assoc-in fx [:db :wallet :send-transaction :gas]
-            ethereum/default-transaction-gas))
-
 (fx/defn set-recipient
   {:events [:wallet.send/set-recipient]}
   [{:keys [db]} address]
@@ -56,7 +52,7 @@
 (defn- fill-prepare-transaction-details
   [db
    {:keys [address name value symbol gas gasPrice gasLimit]
-    :or   {symbol :INT}}
+    :or   {symbol :ETH}}
    all-tokens]
   (assoc db :wallet/prepare-transaction
          (cond-> {:to      address
@@ -67,7 +63,7 @@
            gasLimit  (assoc :gas (money/bignumber gasLimit))
            gasPrice (assoc :gasPrice (money/bignumber gasPrice))
            value (assoc :amount-text
-                        (if (= :INT symbol)
+                        (if (= :ETH symbol)
                           (str (money/internal->formatted value symbol (get all-tokens symbol)))
                           (str value)))
            symbol (assoc :symbol symbol))))

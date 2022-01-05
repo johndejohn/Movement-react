@@ -7,7 +7,6 @@
             [status-im.chat.models.message-list :as message-list]
             [taoensso.timbre :as log]
             [status-im.ethereum.json-rpc :as json-rpc]
-            [clojure.string :as string]
             [status-im.chat.models.pin-message :as models.pin-message]))
 
 (defn cursor->clock-value
@@ -21,22 +20,35 @@
 
 (fx/defn update-chats-in-app-db
   {:events [:chats-list/load-success]}
-  [{:keys [db]} new-chats]
-  (let [old-chats (:chats db)
-        chats (reduce (fn [acc {:keys [chat-id] :as chat}]
-                        (assoc acc chat-id chat))
-                      {}
-                      new-chats)
-        chats (merge old-chats chats)]
-    {:db (assoc db :chats chats
+  [{:keys [db]} ^js new-chats-js]
+  (let [{:keys [all-chats chats-home-list]}
+        (reduce (fn [acc ^js chat-js]
+                  (let [{:keys [chat-id profile-public-key timeline? community-id] :as chat}
+                        (data-store.chats/<-rpc-js chat-js)]
+                    (cond-> acc
+                      (and (not profile-public-key) (not timeline?) (not community-id))
+                      (update :chats-home-list conj chat-id)
+                      :always
+                      (assoc-in [:all-chats chat-id] chat))))
+                {:all-chats {}
+                 :chats-home-list #{}}
+                new-chats-js)]
+    {:db (assoc db :chats all-chats
+                :chats-home-list chats-home-list
                 :chats/loading? false)}))
 
-(fx/defn initialize-chats
-  "Initialize persisted chats on startup"
-  [cofx]
-  (data-store.chats/fetch-chats-rpc cofx {:on-success
-                                          #(re-frame/dispatch
-                                            [:chats-list/load-success %])}))
+(fx/defn load-chat-success
+  {:events [:chats-list/load-chat-success]}
+  [{:keys [db]} ^js chat]
+  (let [{:keys [chat-id] :as chat} (data-store.chats/<-rpc chat)]
+    {:db (update-in db [:chats chat-id] merge chat)}))
+
+(fx/defn load-chat
+  [_ chat-id]
+  {::json-rpc/call [{:method (json-rpc/call-ext-method "chat")
+                     :params [chat-id]
+                     :on-success #(re-frame/dispatch [:chats-list/load-chat-success %])
+                     :on-failure #(log/error "failed to fetch chats" 0 -1 %)}]})
 
 (fx/defn handle-failed-loading-messages
   {:events [::failed-loading-messages]}
@@ -45,19 +57,38 @@
   (when current-chat-id
     {:db (assoc-in db [:pagination-info current-chat-id :loading-messages?] false)}))
 
+(defn mark-chat-all-read
+  [db chat-id]
+  (update-in db [:chats chat-id] assoc
+             :unviewed-messages-count 0
+             :unviewed-mentions-count 0
+             :highlight false))
+
 (fx/defn handle-mark-all-read-successful
   {:events [::mark-all-read-successful]}
   [{:keys [db]} chat-id]
-  {:db (update-in db [:chats chat-id] assoc
-                  :unviewed-messages-count 0
-                  :unviewed-mentions-count 0)})
+  {:db (mark-chat-all-read db chat-id)})
+
+(fx/defn handle-mark-all-read-in-community-successful
+  {:events [::mark-all-read-in-community-successful]}
+  [{:keys [db]} chat-ids]
+  {:db (reduce mark-chat-all-read db chat-ids)})
 
 (fx/defn handle-mark-all-read
   {:events [:chat.ui/mark-all-read-pressed :chat/mark-all-as-read]}
   [_ chat-id]
-  {::json-rpc/call [{:method     (json-rpc/call-ext-method "markAllRead")
+  {:clear-message-notifications chat-id
+   ::json-rpc/call [{:method     (json-rpc/call-ext-method "markAllRead")
                      :params     [chat-id]
                      :on-success #(re-frame/dispatch [::mark-all-read-successful chat-id])}]})
+
+(fx/defn handle-mark-mark-all-read-in-community
+  {:events [:chat.ui/mark-all-read-in-community-pressed]}
+  [_ community-id]
+  {:clear-message-notifications community-id
+   ::json-rpc/call [{:method     (json-rpc/call-ext-method "markAllReadInCommunity")
+                     :params     [community-id]
+                     :on-success #(re-frame/dispatch [::mark-all-read-in-community-successful %])}]})
 
 (fx/defn messages-loaded
   "Loads more messages for current chat"
@@ -68,13 +99,12 @@
                        (get-in db [:pagination-info chat-id :messages-initialized?])))
     (let [already-loaded-messages (get-in db [:messages chat-id])
           ;; We remove those messages that are already loaded, as we might get some duplicates
-          {:keys [all-messages new-messages senders]}
+          {:keys [all-messages new-messages senders contacts]}
           (reduce (fn [{:keys [all-messages] :as acc}
-                       {:keys [message-id alias from]
+                       {:keys [message-id from]
                         :as   message}]
                     (cond-> acc
-                      (and (not (string/blank? alias))
-                           (not (get-in db [:chats chat-id :users from])))
+                      (not (get-in db [:chats chat-id :users from]))
                       (update :senders assoc from message)
 
                       (nil? (get all-messages message-id))
@@ -84,6 +114,7 @@
                       (update :all-messages assoc message-id message)))
                   {:all-messages already-loaded-messages
                    :senders      {}
+                   :contacts     {}
                    :new-messages []}
                   messages)
           current-clock-value (get-in db [:pagination-info chat-id :cursor-clock-value])
@@ -103,7 +134,8 @@
                      (assoc-in [:messages chat-id] all-messages)
                      (update-in [:message-lists chat-id] message-list/add-many new-messages)
                      (assoc-in [:pagination-info chat-id :all-loaded?]
-                               (empty? cursor)))})))
+                               (empty? cursor))
+                     (update :contacts/contacts merge contacts))})))
 
 (fx/defn load-more-messages
   {:events [:chat.ui/load-more-messages]}

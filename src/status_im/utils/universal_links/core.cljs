@@ -69,6 +69,11 @@
   (log/info "universal-links: handling community" community-id)
   (navigation/navigate-to-cofx cofx :community {:community-id community-id}))
 
+(fx/defn handle-community-chat [cofx {:keys [chat-id]}]
+  (log/info "universal-links: handling community chat" chat-id)
+  {:dispatch-n [[:accept-all-activity-center-notifications-from-chat chat-id]
+                [:chat.ui/navigate-to-chat chat-id true]]})
+
 (fx/defn handle-public-chat [cofx {:keys [topic]}]
   (log/info "universal-links: handling public chat" topic)
   (when (seq topic)
@@ -127,6 +132,7 @@
     :private-chat       (handle-private-chat cofx data)
     :community-requests (handle-community-requests cofx data)
     :community          (handle-community cofx data)
+    :community-chat     (handle-community-chat cofx data)
     :contact            (handle-view-profile cofx data)
     :browser            (handle-browse cofx data)
     :eip681             (handle-eip681 cofx data)
@@ -152,8 +158,8 @@
   "Store url in the database if the user is not logged in, to be processed
   on login, otherwise just handle it"
   {:events [:universal-links/handle-url]}
-  [cofx url]
-  (if (multiaccounts.model/logged-in? cofx)
+  [{:keys [db] :as cofx} url]
+  (if (and (multiaccounts.model/logged-in? cofx) (= (:app-state db) "active"))
     (route-url cofx url)
     (store-url-for-later cofx url)))
 

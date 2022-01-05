@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame]
             [status-im.i18n.i18n :as i18n]
             [status-im.ui.components.animation :as animation]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.react :as react]
             [quo.core :as quo]
             [clojure.string :as string])
@@ -88,12 +88,14 @@
         {:title    (i18n/label :t/not-connected-to-peers)
          :accessibility-label "not-connected-to-peers"
          :subtitle (i18n/label :t/unable-to-send-messages)
+         :subtitle-max-lines 2
          :theme    :negative
          :icon     :main-icons/network}]
        [quo/list-item
         {:title    (str (i18n/label :t/connected-to) " " peers-count " " (string/lower-case (i18n/label :t/peers)))
          :accessibility-label "connected-to-n-peers"
          :subtitle (i18n/label :t/can-send-messages)
+         :subtitle-max-lines 2
          :theme    :positive
          :icon     :main-icons/network}])
      [quo/list-header (i18n/label :t/history-nodes)]

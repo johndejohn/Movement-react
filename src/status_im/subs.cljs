@@ -1,4 +1,3 @@
-
 (ns status-im.subs
   (:require [cljs.spec.alpha :as spec]
             [clojure.string :as string]
@@ -73,6 +72,8 @@
 (reg-root-key-sub :mobile-network/remember-choice? :mobile-network/remember-choice?)
 (reg-root-key-sub :qr-modal :qr-modal)
 (reg-root-key-sub :bootnodes/manage :bootnodes/manage)
+(reg-root-key-sub :wakuv2-nodes/manage :wakuv2-nodes/manage)
+(reg-root-key-sub :wakuv2-nodes/list :wakuv2-nodes/list)
 (reg-root-key-sub :networks/current-network :networks/current-network)
 (reg-root-key-sub :networks/networks :networks/networks)
 (reg-root-key-sub :networks/manage :networks/manage)
@@ -84,6 +85,9 @@
 (reg-root-key-sub :logged-in-since :logged-in-since)
 (reg-root-key-sub :link-previews-whitelist :link-previews-whitelist)
 (reg-root-key-sub :app-state :app-state)
+(reg-root-key-sub :home-items-show-number :home-items-show-number)
+(reg-root-key-sub :waku/v2-peer-stats :peer-stats)
+(reg-root-key-sub :visibility-status-updates :visibility-status-updates)
 
 ;;NOTE this one is not related to ethereum network
 ;; it is about cellular network/ wifi network
@@ -122,6 +126,8 @@
 (reg-root-key-sub :group-chat/invitations :group-chat/invitations)
 (reg-root-key-sub :chats/mention-suggestions :chats/mention-suggestions)
 (reg-root-key-sub :chat/inputs-with-mentions :chat/inputs-with-mentions)
+(reg-root-key-sub :chats-home-list :chats-home-list)
+
 ;;browser
 (reg-root-key-sub :browsers :browser/browsers)
 (reg-root-key-sub :browser/options :browser/options)
@@ -154,8 +160,6 @@
 ;;wallet
 (reg-root-key-sub :wallet :wallet)
 (reg-root-key-sub :prices :prices)
-(reg-root-key-sub :collectibles :collectibles)
-(reg-root-key-sub :wallet/all-tokens :wallet/all-tokens)
 (reg-root-key-sub :prices-loading? :prices-loading?)
 (reg-root-key-sub :wallet.transactions :wallet.transactions)
 (reg-root-key-sub :wallet/custom-token-screen :wallet/custom-token-screen)
@@ -166,8 +170,18 @@
 (reg-root-key-sub :wallet/refreshing-history? :wallet/refreshing-history?)
 (reg-root-key-sub :wallet/fetching-error :wallet/fetching-error)
 (reg-root-key-sub :wallet/non-archival-node :wallet/non-archival-node)
-(reg-root-key-sub :wallet/latest-base-fee :wallet/latest-base-fee)
-(reg-root-key-sub :wallet/latest-priority-fee :wallet/latest-priority-fee)
+(reg-root-key-sub :wallet/current-base-fee :wallet/current-base-fee)
+(reg-root-key-sub :wallet/slow-base-fee :wallet/slow-base-fee)
+(reg-root-key-sub :wallet/normal-base-fee :wallet/normal-base-fee)
+(reg-root-key-sub :wallet/fast-base-fee :wallet/fast-base-fee)
+(reg-root-key-sub :wallet/current-priority-fee :wallet/current-priority-fee)
+(reg-root-key-sub :wallet/transactions-management-enabled? :wallet/transactions-management-enabled?)
+(reg-root-key-sub :wallet/all-tokens :wallet/all-tokens)
+(reg-root-key-sub :wallet/collectible-collections :wallet/collectible-collections)
+(reg-root-key-sub :wallet/fetching-collection-assets :wallet/fetching-collection-assets)
+(reg-root-key-sub :wallet/collectible-assets :wallet/collectible-assets)
+(reg-root-key-sub :wallet/selected-collectible :wallet/selected-collectible)
+
 ;;commands
 (reg-root-key-sub :commands/select-account :commands/select-account)
 
@@ -188,6 +202,7 @@
 (reg-root-key-sub :intro-wizard-state :intro-wizard)
 
 (reg-root-key-sub :popover/popover :popover/popover)
+(reg-root-key-sub :visibility-status-popover/popover :visibility-status-popover/popover)
 (reg-root-key-sub :add-account :add-account)
 
 (reg-root-key-sub :keycard :keycard)
@@ -228,6 +243,7 @@
 (reg-root-key-sub :communities/requests-to-join :communities/requests-to-join)
 (reg-root-key-sub :communities/community-id-input :communities/community-id-input)
 (reg-root-key-sub :communities/enabled? :communities/enabled?)
+(reg-root-key-sub :communities/resolve-community-info :communities/resolve-community-info)
 
 (reg-root-key-sub :activity.center/notifications :activity.center/notifications)
 (reg-root-key-sub :activity.center/notifications-count :activity.center/notifications-count)
@@ -251,6 +267,12 @@
      [])))
 
 (re-frame/reg-sub
+ :communities/fetching-community
+ :<- [:communities/resolve-community-info]
+ (fn [info [_ id]]
+   (get info id)))
+
+(re-frame/reg-sub
  :communities/section-list
  :<- [:communities]
  (fn [communities]
@@ -272,6 +294,36 @@
  :<- [:communities]
  (fn [communities [_ id]]
    (get-in communities [id :chats])))
+
+(re-frame/reg-sub
+ :communities/community-members
+ :<- [:communities]
+ (fn [communities [_ id]]
+   (get-in communities [id :members])))
+
+(re-frame/reg-sub
+ :communities/sorted-community-members
+ (fn [[_ community-id]]
+   (let [contacts     (re-frame/subscribe [:contacts/contacts])
+         multiaccount (re-frame/subscribe [:multiaccount])
+         members      (re-frame/subscribe
+                       [:communities/community-members community-id])]
+     [contacts multiaccount members]))
+ (fn [[contacts multiaccount members] _]
+   (let [names (reduce
+                (fn [acc identity]
+                  (let [me?     (= (:public-key multiaccount)
+                                   identity)
+                        contact (when-not me?
+                                  (multiaccounts/contact-by-identity
+                                   contacts identity))
+                        name    (first
+                                 (multiaccounts/contact-two-names-by-identity
+                                  contact multiaccount identity))]
+                    (assoc acc identity name))) {} (keys members))]
+     (->> members
+          (sort-by #(get names (get % 0)))
+          (sort-by #(visibility-status-utils/visibility-status-order (get % 0)))))))
 
 (re-frame/reg-sub
  :communities/communities
@@ -336,6 +388,11 @@
 
 ;;GENERAL ==============================================================================================================
 
+(re-frame/reg-sub
+ :visibility-status-updates/visibility-status-update
+ :<- [:visibility-status-updates]
+ (fn [visibility-status-updates [_ public-key]]
+   (get visibility-status-updates public-key)))
 
 (re-frame/reg-sub
  :multiaccount/logged-in?
@@ -456,17 +513,14 @@
 (re-frame/reg-sub
  :disconnected?
  :<- [:peers-count]
-
  :<- [:waku/v2-flag]
- (fn [[peers-count wakuv2-flag]]
-   ;; TODO Right now wakuv2 module in status-go
-   ;; does not report peer counts properly,
-   ;; so we always assume that we're connected
-   (if wakuv2-flag false (zero? peers-count))))
-
- (fn [peers-count]
-   (and (not config/nimbus-enabled?) (zero? peers-count))))
-
+ :<- [:waku/v2-peer-stats]
+ (fn [[peers-count wakuv2-flag peer-stats]]
+   ;; If wakuv2 is enabled,
+   ;; then fetch connectivity status from
+   ;; peer-stats (populated from "wakuv2.peerstats" status-go signal)
+   ;; Otherwise use peers-count fetched from "discovery.summary" signal
+   (if wakuv2-flag (not (:isOnline peer-stats)) (zero? peers-count))))
 
 (re-frame/reg-sub
  :offline?
@@ -630,6 +684,12 @@
    (ethereum/get-default-account accounts)))
 
 (re-frame/reg-sub
+ :multiaccount/visible-accounts
+ :<- [:multiaccount/accounts]
+ (fn [accounts]
+   (remove :hidden accounts)))
+
+(re-frame/reg-sub
  :sign-in-enabled?
  :<- [:multiaccounts/login]
  (fn [{:keys [password]}]
@@ -641,6 +701,12 @@
  :<- [:multiaccount]
  (fn [multiaccount]
    (fleet/current-fleet-sub multiaccount)))
+
+(re-frame/reg-sub
+ :opensea-enabled?
+ :<- [:multiaccount]
+ (fn [{:keys [opensea-enabled?]}]
+   (boolean opensea-enabled?)))
 
 (re-frame/reg-sub
  :log-level/current-log-level
@@ -685,7 +751,7 @@
  :account-by-address
  :<- [:multiaccount/accounts]
  (fn [accounts [_ address]]
-   (when (and (string? address))
+   (when (string? address)
      (some #(when (= (string/lower-case (:address %))
                      (string/lower-case address)) %) accounts))))
 
@@ -715,13 +781,19 @@
  (fn [accounts]
    (filter #(not= (:type %) :watch) accounts)))
 
+(re-frame/reg-sub
+ :visible-accounts-without-watch-only
+ :<- [:multiaccount/accounts]
+ (fn [accounts]
+   (remove :hidden (filter #(not= (:type %) :watch) accounts))))
+
 (defn filter-recipient-accounts
   [search-filter {:keys [name]}]
   (string/includes? (string/lower-case (str name)) search-filter))
 
 (re-frame/reg-sub
  :accounts-for-recipient
- :<- [:multiaccount/accounts]
+ :<- [:multiaccount/visible-accounts]
  :<- [:wallet/prepare-transaction]
  :<- [:search/recipient-filter]
  (fn [[accounts {:keys [from]} search-filter]]
@@ -750,27 +822,27 @@
          (string/blank? (security/safe-unmask-data seed))
          false))))
 
+(re-frame/reg-sub
+ :multiaccount/current-user-visibility-status
+ :<- [:multiaccount]
+ (fn [{:keys [current-user-visibility-status]}]
+   current-user-visibility-status))
+
 ;;CHAT ==============================================================================================================
 
 (re-frame/reg-sub
- :get-collectible-token
- :<- [:collectibles]
- (fn [collectibles [_ {:keys [symbol token]}]]
-   (get-in collectibles [(keyword symbol) (js/parseInt token)])))
-
-(re-frame/reg-sub
  :chats/chat
- :<- [:chats/active-chats]
+ :<- [::chats]
  (fn [chats [_ chat-id]]
    (get chats chat-id)))
 
 (re-frame/reg-sub
  :chats/by-community-id
- :<- [:chats/active-chats]
+ :<- [::chats]
  (fn [chats [_ community-id]]
    (->> chats
         (keep (fn [[_ chat]]
-                (when (= (:community-id chat) community-id)
+                (when (and (= (:community-id chat) community-id))
                   chat)))
         (sort-by :timestamp >))))
 
@@ -816,6 +888,13 @@
    categories))
 
 (re-frame/reg-sub
+ :communities/sorted-categories
+ :<- [:communities]
+ (fn [communities [_ id]]
+   (->> (get-in communities [id :categories])
+        (sort-by #(:position (get % 1))))))
+
+(re-frame/reg-sub
  :chats/current-chat-ui-props
  :<- [::chat-ui-props]
  :<- [:chats/current-chat-id]
@@ -829,15 +908,15 @@
    (get ui-props prop)))
 
 (re-frame/reg-sub
- :chats/active-chats
+ :chats/home-list-chats
  :<- [::chats]
- (fn [chats]
-   (reduce-kv (fn [acc id {:keys [is-active profile-public-key timeline?] :as chat}]
-                (if (and is-active (not profile-public-key) (not timeline?))
-                  (assoc acc id chat)
-                  acc))
-              {}
-              chats)))
+ :<- [:chats-home-list]
+ (fn [[chats active-chats]]
+   (reduce #(if-let [item (get chats %2)]
+              (conj %1 item)
+              %1)
+           []
+           active-chats)))
 
 (re-frame/reg-sub
  :chat-by-id
@@ -943,7 +1022,7 @@
  :chats/current-chat-chat-view
  :<- [:chats/current-chat]
  (fn [current-chat]
-   (select-keys current-chat [:chat-id :show-input? :group-chat :admins :invitation-admin :public? :chat-type :color :chat-name :synced-to :synced-from :community-id])))
+   (select-keys current-chat [:chat-id :show-input? :group-chat :admins :invitation-admin :public? :chat-type :color :chat-name :synced-to :synced-from :community-id :emoji])))
 
 (re-frame/reg-sub
  :current-chat/metadata
@@ -984,6 +1063,15 @@
  :<- [::pin-messages]
  (fn [pin-messages [_ chat-id]]
    (get pin-messages chat-id {})))
+
+(re-frame/reg-sub
+ :chats/pinned-sorted-list
+ :<- [::pin-messages]
+ (fn [pin-messages [_ chat-id]]
+   (->>
+    (get pin-messages chat-id {})
+    vals
+    (sort-by :pinned-at <))))
 
 (re-frame/reg-sub
  :chats/message-reactions
@@ -1153,24 +1241,24 @@
    (let [contact (or (get contacts id)
                      (when (= id (:public-key multiaccount))
                        multiaccount)
-                     (if identicon
+                     (if (not (string/blank? identicon))
                        {:identicon identicon}
                        (contact.db/public-key->new-contact id)))]
      (multiaccounts/displayed-photo contact))))
 
 (re-frame/reg-sub
  :chats/unread-messages-number
- :<- [:chats/active-chats]
+ :<- [:chats/home-list-chats]
  (fn [chats _]
-   (reduce-kv (fn [{:keys [public other]} _ {:keys [unviewed-messages-count public?] :as chat}]
-                (if (or public? (chat.models/community-chat? chat))
-                  {:public (+ public unviewed-messages-count)
-                   :other other}
-                  {:other (+ other unviewed-messages-count)
-                   :public public}))
-              {:public 0
-               :other 0}
-              chats)))
+   (reduce (fn [{:keys [public other]} {:keys [unviewed-messages-count public?] :as chat}]
+             (if (or public? (chat.models/community-chat? chat))
+               {:public (+ public unviewed-messages-count)
+                :other other}
+               {:other (+ other unviewed-messages-count)
+                :public public}))
+           {:public 0
+            :other 0}
+           chats)))
 
 (re-frame/reg-sub
  :chats/cooldown-enabled?
@@ -1216,11 +1304,10 @@
  :<- [:chats/edit-message]
  (fn [[disconnected? {:keys [processing]} sending-image mainnet? one-to-one-chat? {:keys [public?]} reply edit]]
    (let [sending-image (seq sending-image)]
-     {:send          (and (not (or processing disconnected?)))
+     {:send          (not (or processing disconnected?))
       :stickers      (and mainnet?
                           (not sending-image)
                           (not reply))
-      :image         (and (not reply))
       :image         (and (not reply)
                           (not edit)
                           (not public?))
@@ -1229,10 +1316,9 @@
                           (not edit)
                           (not reply))
       :audio         (and (not sending-image)
-                          (not reply))
                           (not reply)
                           (not edit)
-                          (not public?)
+                          (not public?))
       :sending-image sending-image})))
 
 (re-frame/reg-sub
@@ -1245,7 +1331,7 @@
 
 (defn filter-selected-contacts
   [selected-contacts contacts]
-  (filter #(contact.db/added? (contacts %)) selected-contacts))
+  (filter #(:added (contacts %)) selected-contacts))
 
 (re-frame/reg-sub
  :selected-contacts-count
@@ -1394,8 +1480,8 @@
    manage))
 
 (re-frame/reg-sub
- :manage-bootnode-validation-errors
- :<- [:get-manage-bootnode]
+ :wakuv2-nodes/validation-errors
+ :<- [:wakuv2-nodes/manage]
  (fn [manage]
    (set (keep
          (fn [[k {:keys [error]}]]
@@ -1417,7 +1503,7 @@
  :browser/browsers-vals
  :<- [:browser/browsers]
  (fn [browsers]
-   (vals browsers)))
+   (reverse (vals browsers))))
 
 (re-frame/reg-sub
  :get-current-browser
@@ -1479,7 +1565,8 @@
  :<- [:search/filtered-chats]
  :<- [:communities/communities]
  :<- [:view-id]
- (fn [[search-filter filtered-chats communities view-id]]
+ :<- [:home-items-show-number]
+ (fn [[search-filter filtered-chats communities view-id home-items-show-number]]
    (if (= view-id :home)
      (let [communities-count (count communities)
            chats-count (count filtered-chats)
@@ -1493,7 +1580,7 @@
                                                 assoc :last? true)
                                         communities)
            res {:search-filter search-filter
-                :items         (concat communities-with-separator filtered-chats)}]
+                :items         (concat communities-with-separator (take home-items-show-number filtered-chats))}]
        (reset! memo-home-items res)
        res)
      ;;we want to keep data unchanged so react doesn't change component when we leave screen
@@ -1558,8 +1645,10 @@
 (re-frame/reg-sub
  :balances
  :<- [:wallet]
- (fn [wallet]
-   (map :balance (vals (:accounts wallet)))))
+ :<- [:multiaccount/visible-accounts]
+ (fn [[wallet accounts]]
+   (let [accounts (map :address accounts)]
+     (map :balance (vals (select-keys (:accounts wallet) accounts))))))
 
 (re-frame/reg-sub
  :empty-balances?
@@ -1589,7 +1678,7 @@
  :wallet.settings/currency
  :<- [:multiaccount]
  (fn [settings]
-   (or (get settings :currency) :int)))
+   (or (get settings :currency) :usd)))
 
 (defn- get-balance-total-value
   [balance prices currency token->decimals]
@@ -1794,6 +1883,26 @@
                         (string/lower-case search-filter))
                favs)))))
 
+(re-frame/reg-sub
+ :wallet/collectible-collection
+ :<- [:wallet/collectible-collections]
+ (fn [all-collections [_ address]]
+   (when address
+     (let [all-collections (get all-collections (string/lower-case address) [])]
+       (sort-by :name all-collections)))))
+
+(re-frame/reg-sub
+ :wallet/collectible-assets-by-collection-and-address
+ :<- [:wallet/collectible-assets]
+ (fn [all-assets [_ address collectible-slug]]
+   (get-in all-assets [address collectible-slug] [])))
+
+(re-frame/reg-sub
+ :wallet/fetching-assets-by-collectible-slug
+ :<- [:wallet/fetching-collection-assets]
+ (fn [fetching-collection-assets [_ collectible-slug]]
+   (get fetching-collection-assets collectible-slug false)))
+
 ;;ACTIVITY CENTER NOTIFICATIONS ========================================================================================
 
 (defn- group-notifications-by-date
@@ -1811,12 +1920,17 @@
  :activity.center/notifications-grouped-by-date
  :<- [:activity.center/notifications]
  (fn [{:keys [notifications]}]
-   (let [supported-notifications (filter (fn [{:keys [type]}]
-                                           (or (= constants/activity-center-notification-type-mention type)
-                                               (= constants/activity-center-notification-type-one-to-one-chat type)
-                                               (= constants/activity-center-notification-type-private-group-chat type)
-                                               (= constants/activity-center-notification-type-reply type))) notifications)]
-     (group-notifications-by-date (map #(assoc % :timestamp (or (:timestamp %) (:timestamp (or (:message %) (:last-message %))))) supported-notifications)))))
+   (let [supported-notifications
+         (filter (fn [{:keys [type last-message]}]
+                   (or (and (= constants/activity-center-notification-type-one-to-one-chat type)
+                            (not (nil? last-message)))
+                       (= constants/activity-center-notification-type-private-group-chat type)
+                       (= constants/activity-center-notification-type-reply type)
+                       (= constants/activity-center-notification-type-mention type)))
+                 notifications)]
+     (group-notifications-by-date
+      (map #(assoc % :timestamp (or (:timestamp %) (:timestamp (or (:message %) (:last-message %)))))
+           supported-notifications)))))
 
 ;;WALLET TRANSACTIONS ==================================================================================================
 
@@ -1986,7 +2100,7 @@
     (re-frame/subscribe [:ethereum/native-currency])
     (re-frame/subscribe [:ethereum/chain-keyword])])
  (fn [[transactions native-currency chain-keyword] [_ hash _]]
-   (let [{:keys [gas-used gas-price hash timestamp type]
+   (let [{:keys [gas-used gas-price fee-cap tip-cap hash timestamp type]
           :as transaction}
          (get transactions hash)
          native-currency-text (name (or (:symbol-display native-currency)
@@ -1994,13 +2108,21 @@
      (when transaction
        (merge transaction
               {:gas-price-eth  (if gas-price
-                                 (money/wei->str :int
+                                 (money/wei->str :eth
                                                  gas-price
                                                  native-currency-text)
                                  "-")
                :gas-price-gwei (if gas-price
                                  (money/wei->str :gwei
                                                  gas-price)
+                                 "-")
+               :fee-cap-gwei   (if fee-cap
+                                 (money/wei->str :gwei
+                                                 fee-cap)
+                                 "-")
+               :tip-cap-gwei   (if tip-cap
+                                 (money/wei->str :gwei
+                                                 tip-cap)
                                  "-")
                :date           (datetime/timestamp->long-date timestamp)}
               (if (= type :unsigned)
@@ -2011,7 +2133,7 @@
                  :nonce     (i18n/label :not-applicable)
                  :hash      (i18n/label :not-applicable)}
                 {:cost (when gas-used
-                         (money/wei->str :int
+                         (money/wei->str :eth
                                          (money/fee-value gas-used gas-price)
                                          native-currency-text))
                  :url  (transactions/get-transaction-details-url
@@ -2064,14 +2186,6 @@
  :<- [:wallet]
  :request-transaction)
 
-(re-frame/reg-sub
- :screen-collectibles
- :<- [:collectibles]
- :<- [:get-screen-params]
- (fn [[collectibles {:keys [symbol]}]]
-   (when-let [v (get collectibles symbol)]
-     (mapv #(assoc (second %) :id (first %)) v))))
-
 ;;UI ==============================================================================================================
 
 (re-frame/reg-sub
@@ -2120,6 +2234,12 @@
    (contact.db/query-chat-contacts chat contacts query-fn)))
 
 (re-frame/reg-sub
+ :multiaccount/profile-pictures-show-to
+ :<- [:multiaccount]
+ (fn [multiaccount]
+   (get multiaccount :profile-pictures-show-to)))
+
+(re-frame/reg-sub
  ::profile-pictures-visibility
  :<- [:multiaccount]
  (fn [multiaccount]
@@ -2140,6 +2260,15 @@
    (contact.db/get-active-contacts contacts)))
 
 (re-frame/reg-sub
+ :contacts/sorted-contacts
+ :<- [:contacts/active]
+ (fn [active-contacts]
+   (->> active-contacts
+        (sort-by :alias)
+        (sort-by
+         #(visibility-status-utils/visibility-status-order (:public-key %))))))
+
+(re-frame/reg-sub
  :contacts/active-count
  :<- [:contacts/active]
  (fn [active-contacts]
@@ -2151,7 +2280,7 @@
  (fn [contacts]
    (->> contacts
         (filter (fn [[_ contact]]
-                  (contact.db/blocked? contact)))
+                  (:blocked contact)))
         (contact.db/sort-contacts))))
 
 (re-frame/reg-sub
@@ -2196,15 +2325,14 @@
  :contacts/contact-by-identity
  :<- [:contacts/contacts]
  (fn [contacts [_ identity]]
-   (or (get contacts identity)
-       (multiaccounts/contact-with-names {:public-key identity}))))
+   (multiaccounts/contact-by-identity contacts identity)))
 
 (re-frame/reg-sub
  :contacts/contact-added?
  (fn [[_ identity] _]
    [(re-frame/subscribe [:contacts/contact-by-identity identity])])
  (fn [[contact] _]
-   (contact.db/added? contact)))
+   (:added contact)))
 
 (re-frame/reg-sub
  :contacts/contact-two-names-by-identity
@@ -2212,11 +2340,8 @@
    [(re-frame/subscribe [:contacts/contact-by-identity identity])
     (re-frame/subscribe [:multiaccount])])
  (fn [[contact current-multiaccount] [_ identity]]
-   (let [me? (= (:public-key current-multiaccount) identity)]
-     (if me?
-       [(or (:preferred-name current-multiaccount)
-            (gfycat/generate-gfy identity))]
-       (multiaccounts/contact-two-names contact false)))))
+   (multiaccounts/contact-two-names-by-identity contact current-multiaccount
+                                                identity)))
 
 (re-frame/reg-sub
  :contacts/contact-name-by-identity
@@ -2252,8 +2377,7 @@
  :contacts/all-contacts-not-in-current-chat
  :<- [::query-current-chat-contacts remove]
  (fn [contacts]
-   (->> contacts
-        (filter contact.db/added?))))
+   (filter :added contacts)))
 
 (re-frame/reg-sub
  :contacts/current-chat-contacts
@@ -2421,7 +2545,7 @@
 
 (re-frame/reg-sub
  :search/filtered-chats
- :<- [:chats/active-chats]
+ :<- [:chats/home-list-chats]
  :<- [:contacts/contacts]
  :<- [:search/home-filter]
  (fn [[chats contacts search-filter]]
@@ -2431,13 +2555,9 @@
                            (partial filter-chat
                                     contacts
                                     (string/lower-case search-filter))
-                           (vals chats))
-                          (vals chats))]
-
-     (sort-by :timestamp > (filter (fn [{:keys [community-id]}]
-                                     ;; Ignore communities
-                                     (not community-id))
-                                   filtered-chats)))))
+                           chats)
+                          chats)]
+     (sort-by :timestamp > filtered-chats))))
 
 (defn extract-currency-attributes [currency]
   (let [{:keys [code display-name]} (val currency)]
@@ -2462,102 +2582,6 @@
    {:search-filter search-token-filter
     :tokens {true (apply-filter search-token-filter custom-tokens extract-token-attributes false)
              nil (apply-filter search-token-filter default-tokens extract-token-attributes false)}}))
-
-;; TRIBUTE TO TALK
-(re-frame/reg-sub
- :tribute-to-talk/settings
- :<- [:multiaccount]
- :<- [:ethereum/chain-keyword]
- (fn [[multiaccount chain-keyword]]
-   (get-in multiaccount [:tribute-to-talk]) chain-keyword))
-
-(re-frame/reg-sub
- :tribute-to-talk/screen-params
- :<- [:screen-params]
- (fn [screen-params]
-   (get screen-params :tribute-to-talk)))
-
-(re-frame/reg-sub
- :tribute-to-talk/profile
- :<- [:tribute-to-talk/settings]
- :<- [:tribute-to-talk/screen-params]
- (fn [[{:keys [seen? snt-amount]}
-       {:keys [state unavailable?]}]]
-   (let [state (or state (if snt-amount :completed :disabled))
-         snt-amount (tribute-to-talk.db/from-wei snt-amount)]
-     (when config/tr-to-talk-enabled?
-       (if unavailable?
-         {:subtext "Change network to enable Tribute to Talk"
-          :active? false
-          :icon :main-icons/tribute-to-talk
-          :icon-color colors/gray}
-         (cond-> {:new? (not seen?)}
-           (and (not (and seen?
-                          snt-amount
-                          (#{:signing :pending :transaction-failed :completed} state))))
-           (assoc :subtext (i18n/label :t/tribute-to-talk-desc))
-
-           (#{:signing :pending} state)
-           (assoc :activity-indicator {:animating true
-                                       :color colors/blue}
-                  :subtext (case state
-                             :pending (i18n/label :t/pending-confirmation)
-                             :signing (i18n/label :t/waiting-to-sign)))
-
-           (= state :transaction-failed)
-           (assoc :icon :main-icons/warning
-                  :icon-color colors/red
-                  :subtext (i18n/label :t/transaction-failed))
-
-           (not (#{:signing :pending :transaction-failed} state))
-           (assoc :icon :main-icons/tribute-to-talk)
-
-           (and (= state :completed)
-                (not-empty snt-amount))
-           (assoc :accessory-value (str snt-amount " MNT"))))))))
-
-(re-frame/reg-sub
- :tribute-to-talk/enabled?
- :<- [:tribute-to-talk/settings]
- (fn [settings]
-   (tribute-to-talk.db/enabled? settings)))
-
-(re-frame/reg-sub
- :tribute-to-talk/settings-ui
- :<- [:tribute-to-talk/settings]
- :<- [:tribute-to-talk/screen-params]
- :<- [:prices]
- :<- [:wallet/currency]
- (fn [[{:keys [seen? snt-amount message]
-        :as settings}
-       {:keys [step editing? state error]
-        :or {step :intro}
-        screen-snt-amount :snt-amount}
-       prices currency]]
-   (let [fiat-value (if snt-amount
-                      (money/fiat-amount-value
-                       snt-amount
-                       :SNT
-                       (-> currency :code keyword)
-                       prices)
-                      "0")]
-     (cond-> {:seen? seen?
-              :snt-amount (tribute-to-talk.db/from-wei snt-amount)
-              :message message
-              :enabled? (tribute-to-talk.db/enabled? settings)
-              :error error
-              :step step
-              :state (or state (if snt-amount :completed :disabled))
-              :editing? editing?
-              :fiat-value (str fiat-value " " (:code currency))}
-
-       (= step :set-snt-amount)
-       (assoc :snt-amount (str screen-snt-amount)
-              :disable-button?
-              (boolean (and (= step :set-snt-amount)
-                            (or (string/blank? screen-snt-amount)
-                                (#{"0" "0.0" "0.00"} screen-snt-amount)
-                                (string/ends-with? screen-snt-amount ".")))))))))
 
 ;;ENS ==================================================================================================================
 (re-frame/reg-sub
@@ -2585,7 +2609,7 @@
   (str (ens/registration-cost chain-id)
        (case chain-id
          3 " STT"
-         1 " MNT"
+         1 " SNT"
          "")))
 
 (re-frame/reg-sub
@@ -2595,18 +2619,20 @@
  :<- [:multiaccount/default-account]
  :<- [:multiaccount/public-key]
  :<- [:chain-id]
- :<- [:balance-default]
- (fn [[{:keys [custom-domain? username]}
-       chain default-account public-key chain-id balance]]
-   {:address           (ethereum/normalized-hex (:address default-account))
-    :username          username
-    :public-key        public-key
-    :custom-domain?    custom-domain?
-    :chain             chain
-    :amount-label      (ens-amount-label chain-id)
-    :sufficient-funds? (money/sufficient-funds?
-                        (money/formatted->internal (money/bignumber 1) :MNT 18)
-                        (get balance :MNT))}))
+ :<- [:wallet]
+ (fn [[{:keys [custom-domain? username address]}
+       chain default-account public-key chain-id wallet]]
+   (let [address (or address (ethereum/normalized-hex (:address default-account)))
+         balance (get-in wallet [:accounts address :balance])]
+     {:address           address
+      :username          username
+      :public-key        public-key
+      :custom-domain?    custom-domain?
+      :chain             chain
+      :amount-label      (ens-amount-label chain-id)
+      :sufficient-funds? (money/sufficient-funds?
+                          (money/formatted->internal (money/bignumber 10) (ethereum/chain-keyword->snt-symbol chain) 18)
+                          (get balance (ethereum/chain-keyword->snt-symbol chain)))})))
 
 (re-frame/reg-sub
  :ens/confirmation-screen
@@ -2664,14 +2690,22 @@
 
 (re-frame/reg-sub
  :signing/priority-fee-suggestions-range
- :<- [:wallet/latest-priority-fee]
- (fn [latest-fee]
-   [0 (->> latest-fee
-           money/bignumber
-           (money/wei-> :gwei)
-           (money/mul (money/bignumber 2))
-           money/to-fixed
-           js/parseFloat)]))
+ :<- [:wallet/current-priority-fee]
+ :<- [:wallet/slow-base-fee]
+ :<- [:wallet/normal-base-fee]
+ :<- [:wallet/fast-base-fee]
+ (fn [[latest-tip slow normal fast]]
+   (reduce
+    (fn [acc [k fees]]
+      (assoc acc k (reduce
+                    (fn [acc [k fee]]
+                      (assoc acc k (-> fee
+                                       money/wei->gwei
+                                       (money/to-fixed 2))))
+                    {}
+                    fees)))
+    {}
+    (signing.gas/get-fee-options latest-tip slow normal fast))))
 
 (re-frame/reg-sub
  :signing/phrase
@@ -2693,8 +2727,8 @@
          (assoc :fiat-amount
                 (money/fiat-amount-value (:amount message)
                                          (:currency message)
-                                         :INT prices)
-                :fiat-currency "INT")
+                                         :USD prices)
+                :fiat-currency "USD")
          (and (:receiver message) wallet-acc)
          (assoc :account wallet-acc)))
      sign)))
@@ -2728,8 +2762,8 @@
   [gas-error-message balance symbol amount ^js gas ^js gasPrice]
   (if (and gas gasPrice)
     (let [^js fee (.times gas gasPrice)
-          ^js available-ether (money/bignumber (get balance :INT 0))
-          ^js available-for-gas (if (= :INT symbol)
+          ^js available-ether (money/bignumber (get balance :ETH 0))
+          ^js available-for-gas (if (= :ETH symbol)
                                   (.minus available-ether (money/bignumber amount))
                                   available-ether)]
       (merge {:gas-error-state (when gas-error-message :gas-is-set)}
@@ -2743,14 +2777,14 @@
  (fn [[_ address] _]
    [(re-frame/subscribe [:signing/tx])
     (re-frame/subscribe [:balance address])])
- (fn [[{:keys [amount token gas gasPrice approve? gas-error-message]} balance]]
-   (when-not (eip1559/sync-enabled?)
+ (fn [[{:keys [amount token gas gasPrice maxFeePerGas approve? gas-error-message]} balance]]
+   (let [gas-price (or maxFeePerGas gasPrice)]
      (if (and amount token (not approve?))
        (let [amount-bn (money/formatted->internal (money/bignumber amount) (:symbol token) (:decimals token))
              amount-error (or (get-amount-error amount (:decimals token))
                               (get-sufficient-funds-error balance (:symbol token) amount-bn))]
-         (merge amount-error (get-sufficient-gas-error gas-error-message balance (:symbol token) amount-bn gas gasPrice)))
-       (get-sufficient-gas-error gas-error-message balance nil nil gas gasPrice)))))
+         (merge amount-error (get-sufficient-gas-error gas-error-message balance (:symbol token) amount-bn gas gas-price)))
+       (get-sufficient-gas-error gas-error-message balance nil nil gas gas-price)))))
 
 (re-frame/reg-sub
  :wallet.send/prepare-transaction-with-balance

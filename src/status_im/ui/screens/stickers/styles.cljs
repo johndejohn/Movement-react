@@ -1,5 +1,5 @@
 (ns status-im.ui.screens.stickers.styles
-  (:require [status-im.ui.components.colors :as colors]))
+  (:require [quo.design-system.colors :as colors]))
 
 (def screen
   {:flex             1})
@@ -10,7 +10,7 @@
    :height        sticker-icon-size
    :border-radius (/ sticker-icon-size 2)})
 
-(defn price-badge [not-enough-int?]
+(defn price-badge [not-enough-snt?]
   {:background-color   (if not-enough-snt? colors/gray colors/blue)
    :border-radius      14
    :flex-direction     :row

@@ -12,7 +12,7 @@
             [status-im.ui.screens.profile.contact.styles :as styles]
             [status-im.utils.utils :as utils]
             [status-im.ui.components.topbar :as topbar]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.toolbar :as toolbar]
             [status-im.ui.components.keyboard-avoid-presentation :as kb-presentation]
             [status-im.utils.platform :as platform]
@@ -40,11 +40,13 @@
               :accessibility-label :add-to-contacts-button
               :action              #(re-frame/dispatch [:contact.ui/add-to-contact-pressed public-key])}])
           (when platform/ios?
-            [{:label               (i18n/label (if muted? :t/unmute :t/mute))
+            [{:label               (i18n/label (if (or muted? blocked?) :t/unmute :t/mute))
               :icon                :main-icons/notification
               :accessibility-label :mute-chat
               :selected            muted?
-              :action              #(re-frame/dispatch [::chat.models/mute-chat-toggled public-key (not muted?)])}])
+              :disabled            blocked?
+              :action              (when-not blocked?
+                                     #(re-frame/dispatch [::chat.models/mute-chat-toggled public-key (not muted?)]))}])
           [{:label               (i18n/label (if blocked? :t/unblock :t/block))
             :negative            true
             :selected            blocked?
@@ -150,19 +152,25 @@
   (views/letsubs [{:keys [public-key names]} [:contacts/current-contact]]
     [nickname-view public-key names]))
 
-(defn button-item [{:keys [icon label action selected negative]}]
+(defn button-item [{:keys [icon label action selected disabled negative]}]
   [react/touchable-highlight {:on-press action :style {:flex 1}
                               :accessibility-label (str label "-item-button")}
    [react/view {:flex 1 :align-items :center}
     [list-item/icon-column {:icon icon
                             :size :small
-                            :icon-bg-color (if negative
-                                             (if selected colors/red colors/red-light)
-                                             (if selected colors/blue colors/blue-light))
-                            :icon-color (if negative
-                                          (if selected colors/white colors/red)
-                                          (if selected colors/white colors/blue))}]
-    [react/text {:style {:text-align :center :color  (if negative colors/red colors/blue)
+                            :icon-bg-color (if disabled
+                                             colors/gray-lighter
+                                             (if negative
+                                               (if selected colors/red colors/red-light)
+                                               (if selected colors/blue colors/blue-light)))
+                            :icon-color (if disabled
+                                          colors/gray
+                                          (if negative
+                                            (if selected colors/white colors/red)
+                                            (if selected colors/white colors/blue)))}]
+    [react/text {:style {:text-align :center :color  (if disabled
+                                                       colors/gray
+                                                       (if negative colors/red colors/blue))
                          :font-size 12 :line-height 16 :margin-top 6}
                  :number-of-lines 2}
      label]]])
@@ -197,7 +205,8 @@
                                         :title    first-name
                                         :photo    (multiaccounts/displayed-photo contact)
                                         :monospace (not ens-verified)
-                                        :subtitle second-name})]
+                                        :subtitle second-name
+                                        :public-key public-key})]
                                      [react/view {:height 1 :background-color colors/gray-lighter :margin-top 8}]
                                      [nickname-settings contact]
                                      [pin-settings public-key (count pinned-messages)]

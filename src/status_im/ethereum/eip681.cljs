@@ -77,8 +77,8 @@
   "Takes a map as returned by `parse-uri` and returns value as BigNumber"
   [s]
   (when (string? s)
-    (let [eth? (string/ends-with? s "INT")
-          ^js n (money/bignumber (string/replace s "INT" ""))]
+    (let [eth? (string/ends-with? s "ETH")
+          ^js n (money/bignumber (string/replace s "ETH" ""))]
       (if eth? (.times n 1e18) n))))
 
 (defn extract-request-details
@@ -90,7 +90,7 @@
            (case function-name
              nil
              {:value   (parse-eth-value value)
-              :symbol  :INT
+              :symbol  :ETH
               :address address}
              "transfer"
              {:value   (money/bignumber (:uint256 function-arguments))

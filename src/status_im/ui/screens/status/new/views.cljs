@@ -6,7 +6,7 @@
             [re-frame.core :as re-frame]
             [status-im.ui.components.toolbar :as toolbar]
             [quo.core :as quo]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [reagent.core :as reagent]
             [clojure.string :as string]
             [status-im.ui.components.icons.icons :as icons]
@@ -41,10 +41,9 @@
       [buttons]
       (for [img camera-roll-photos]
         ^{:key (str "image" img)}
-        (when img
-          [image-preview img]))]]))
+        [image-preview img])]]))
 
-(def message-max-lenght 300)
+(def message-max-lenght 600)
 
 (defn my-status []
   (let [images-opened (reagent/atom false)

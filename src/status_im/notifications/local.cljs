@@ -14,12 +14,7 @@
             [status-im.ui.components.react :as react]
             [cljs-bean.core :as bean]
             [clojure.string :as clojure.string]
-
-            [status-im.chat.models :as chat.models]
-            [status-im.constants :as constants]
-
             [status-im.chat.models :as chat.models]))
-
 
 (def default-erc20-token
   {:symbol   :ERC20
@@ -98,110 +93,15 @@
      :user-info notification
      :message   description}))
 
-
-
 (defn show-message-pn?
   [{{:keys [app-state multiaccount]} :db :as cofx}
-   {{:keys [message chat]} :body}]
-  (let [chat-id (get chat :id)
-        chat-type (get chat :chatType)]
-    (and
-     (or (= app-state "background")
-         (not (chat.models/foreground-chat? cofx chat-id)))
-     (or (contains? #{constants/one-to-one-chat-type
-                      constants/private-group-chat-type}
-                    chat-type)
-         (contains? (set (get message :mentions))
-                    (get multiaccount :public-key))))))
-
-(defn create-message-notification
-
-  ([cofx notification]
-   (when (or (nil? cofx)
-             (show-message-pn? cofx notification))
-     (create-message-notification notification)))
-  ([{{:keys [message contact chat]} :body}]
-   (let [chat-type    (get chat :chatType)
-         chat-id      (get chat :id)
-         contact-name @(re-frame/subscribe
-                        [:contacts/contact-name-by-identity (get contact :id)])
-         group-chat?  (not= chat-type constants/one-to-one-chat-type)
-         title        (clojure.string/join
-                       " "
-                       (cond-> [contact-name]
-                         group-chat?
-                         (conj
-                          ;; TODO(rasom): to be translated
-                          "in")
-
-                         group-chat?
-                         (conj
-                          (str (when (contains? #{constants/public-chat-type
-                                                  constants/community-chat-type}
-                                                chat-type)
-                                 "#")
-                               (get chat :name)))))]
-     {:type             "message"
-      :chatType         (str (get chat :chatType))
-      :from             title
-      :chatId           chat-id
-      :alias            title
-      :identicon        (get contact :identicon)
-      :whisperTimestamp (get message :whisperTimestamp)
-      :text             (reply/get-quoted-text-with-mentions (:parsedText message))})))
-
-  ([{:keys [db] :as cofx} {{:keys [message]} :body :as notification}]
-   (when-not (nil? cofx)
-     (let [chat         (chat-by-message db message)
-           contact-id   (get message :from)
-           contact      (get-in db [:contacts/contacts contact-id])
-           notification (assoc notification
-                               :chat chat
-                               :contact-id contact-id
-                               :contact contact)]
-       (when (show-message-pn? cofx notification)
-         (create-message-notification notification)))))
-  ([{{:keys [message]} :body
-     {:keys [chat-type chat-id] :as chat} :chat
-     {:keys [identicon]} :contact
-     contact-id :contact-id}]
-   (when (and chat-type chat-id)
-     ;;TODO : DON'T USE SUBS IN EVENTS
-     (let [contact-name @(re-frame/subscribe
-                          [:contacts/contact-name-by-identity contact-id])
-           group-chat?  (not= chat-type constants/one-to-one-chat-type)
-           title        (clojure.string/join
-                         " "
-                         (cond-> [contact-name]
-                           group-chat?
-                           (conj
-                            ;; TODO(rasom): to be translated
-                            "in")
-
-                           group-chat?
-                           (conj
-                            (str (when (contains? #{constants/public-chat-type
-                                                    constants/community-chat-type}
-                                                  chat-type)
-                                   "#")
-                                 (get chat :name)))))]
-       {:type             "message"
-        :chatType         (str chat-type)
-        :from             title
-        :chatId           chat-id
-        :alias            title
-        :identicon        (or identicon (identicon/identicon contact-id))
-        :whisperTimestamp (get message :whisperTimestamp)
-        :text             (reply/get-quoted-text-with-mentions (:parsedText message))})))
-
-
-(defn show-message-pn?
-  [{{:keys [app-state]} :db :as cofx}
    notification]
-  (let [chat-id (get-in notification [:body :chat :id])]
-    (or (= app-state "background")
-        (not (chat.models/foreground-chat? cofx chat-id)))))
-
+  (let [chat-id             (get-in notification [:body :chat :id])
+        notification-author (get-in notification [:notificationAuthor :id])]
+    (and
+     (not= notification-author (:public-key multiaccount))
+     (or (= app-state "background")
+         (not (chat.models/foreground-chat? cofx chat-id))))))
 
 (defn create-notification
   ([notification]

@@ -11,7 +11,7 @@
             [quo.previews.main :as quo.preview]
             [status-im.ui.screens.profile.contact.views :as contact]
             [status-im.ui.screens.notifications-settings.views :as notifications-settings]
-            [status-im.ui.screens.wallet.send.views :as wallet]
+            [status-im.ui.screens.wallet.send.views :as wallet.send]
             [status-im.ui.screens.status.new.views :as status.new]
             [status-im.ui.screens.browser.bookmarks.views :as bookmarks]
             [status-im.ui.screens.communities.invite :as communities.invite]
@@ -30,6 +30,7 @@
             [status-im.ui.screens.communities.profile :as community.profile]
             [status-im.ui.screens.communities.edit :as community.edit]
             [status-im.ui.screens.communities.create-channel :as create-channel]
+            [status-im.ui.screens.communities.community-emoji-thumbnail-picker :as community-emoji-thumbnail-picker]
             [status-im.ui.screens.communities.membership :as membership]
             [status-im.ui.screens.communities.members :as members]
             [status-im.ui.screens.communities.requests-to-join :as requests-to-join]
@@ -54,6 +55,7 @@
             [status-im.ui.screens.wallet.transactions.views :as wallet-transactions]
             [status-im.ui.screens.wallet.custom-tokens.views :as custom-tokens]
             [status-im.ui.screens.wallet.accounts.views :as wallet.accounts]
+            [status-im.ui.screens.wallet.collectibles.views :as wallet.collectibles]
             [status-im.ui.screens.wallet.account.views :as wallet.account]
             [status-im.ui.screens.wallet.add-new.views :as add-account]
             [status-im.ui.screens.wallet.account-settings.views :as account-settings]
@@ -66,6 +68,10 @@
              :as
              edit-bootnode]
             [status-im.ui.screens.bootnodes-settings.views :as bootnodes-settings]
+            [status-im.ui.screens.wakuv2-settings.views :as wakuv2-settings]
+            [status-im.ui.screens.wakuv2-settings.edit-node.views
+             :as
+             edit-wakuv2-node]
             [status-im.ui.screens.pairing.views :as pairing]
             [status-im.ui.screens.offline-messaging-settings.edit-mailserver.views
              :as
@@ -104,11 +110,13 @@
             [status-im.ui.screens.communities.channel-details :as communities.channel-details]
             [status-im.ui.screens.communities.edit-channel :as edit-channel]
             [status-im.ui.screens.anonymous-metrics-settings.views :as anonymous-metrics-settings]
-            [status-im.ui.components.colors :as colors]
+            [quo.design-system.colors :as colors]
             [status-im.ui.components.icons.icons :as icons]
             [status-im.ui.screens.chat.pinned-messages :as pin-messages]
             [status-im.ui.screens.communities.create-category :as create-category]
-            [status-im.ui.screens.communities.select-category :as select-category]))
+            [status-im.ui.screens.communities.select-category :as select-category]
+            [status-im.ui.screens.communities.reorder-categories :as reorder-categories]
+            [status-im.ui.screens.wallet.accounts-manage.views :as accounts-manage]))
 
 (def components
   [{:name      :chat-toolbar
@@ -264,6 +272,10 @@
             :insets    {:bottom true}
             :options   {:topBar {:title {:text (i18n/label :t/create-channel-title)}}}
             :component create-channel/view}
+           {:name      :community-emoji-thumbnail-picker
+            :insets    {:bottom true}
+            :options   {:topBar {:title {:text (i18n/label :t/community-emoji-thumbnail-title)}}}
+            :component community-emoji-thumbnail-picker/view}
            {:name      :create-community-category
             :insets    {:bottom true}
             :options   {:topBar {:title {:text (i18n/label :t/new-category)}}}
@@ -278,12 +290,17 @@
             :insets    {:bottom true}
             :options   {:topBar {:visible false}}
             :component community/community-edit}
+           {:name      :community-reorder-categories
+            :insets    {:top false}
+            :options   {:topBar {:visible false}}
+            :component reorder-categories/view}
            {:name      :community-channel-details
             :insets    {:top false}
             ;;TODO custom
             :options   {:topBar {:visible false}}
             :component communities.channel-details/view}
            {:name      :edit-community-channel
+            :options   {:topBar {:title {:text (i18n/label :t/edit-channel-title)}}}
             :insets    {:bottom true}
             :component edit-channel/view}
            {:name      :contact-toggle-list
@@ -376,6 +393,10 @@
             :options   {:topBar {:title {:text (i18n/label :t/main-currency)}}}
             :component currency-settings/currency-settings}
 
+           {:name      :manage-accounts
+            :options   {:topBar {:title {:text (i18n/label :t/wallet-manage-accounts)}}}
+            :component accounts-manage/manage}
+
            ;;MY STATUS
 
            {:name      :status
@@ -414,6 +435,14 @@
            {:name      :blocked-users-list
             :options   {:topBar {:title {:text (i18n/label :t/blocked-users)}}}
             :component contacts-list/blocked-users-list}
+           {:name      :wakuv2-settings
+            ;;TODO dynamic title
+            :options   {:topBar {:visible false}}
+            :component wakuv2-settings/wakuv2-settings}
+           {:name      :edit-wakuv2-node
+            ;;TODO dynamic title
+            :options   {:topBar {:visible false}}
+            :component edit-wakuv2-node/edit-node}
            {:name      :bootnodes-settings
             ;;TODO dynamic title
             :options   {:topBar {:visible false}}
@@ -448,9 +477,12 @@
            {:name      :appearance
             :options   {:topBar {:title {:text (i18n/label :t/appearance)}}}
             :component appearance/appearance}
-           {:name      :appearance-profile-pic
+           {:name      :privacy-and-security-profile-pic-show-to
+            :options   {:topbar {:title {:text (i18n/label :t/show-profile-pictures-to)}}}
+            :component privacy-and-security/profile-pic-show-to}
+           {:name      :privacy-and-security-profile-pic
             :options   {:topBar {:title {:text (i18n/label :t/show-profile-pictures)}}}
-            :component appearance/profile-pic}
+            :component privacy-and-security/profile-pic}
            {:name      :notifications
             :options   {:topBar {:title {:text (i18n/label :t/notification-settings)}}}
             :component notifications-settings/notifications-settings}
@@ -647,7 +679,7 @@
             :options     {:topBar             {:title {:text (i18n/label :t/send-transaction)}}
                           :swipeToDismiss     false
                           :hardwareBackButton {:dismissModalOnPress false}}
-            :component   wallet/prepare-send-transaction}
+            :component   wallet.send/prepare-send-transaction}
 
            ;[Wallet] Request Transaction
            {:name        :request-transaction
@@ -656,7 +688,7 @@
             :options     {:topBar             {:title {:text (i18n/label :t/request-transaction)}}
                           :swipeToDismiss     false
                           :hardwareBackButton {:dismissModalOnPress false}}
-            :component   wallet/request-transaction}
+            :component   wallet.send/request-transaction}
 
            ;[Wallet] Buy crypto
            {:name      :buy-crypto
@@ -669,6 +701,12 @@
             ;;TODO subtitle
             :options   {:topBar {:visible false}}
             :component wallet.buy-crypto/website}
+
+           {:name   :nft-details
+            :insets {:bottom true}
+            ;;TODO dynamic title
+            :options   {:topBar {:visible false}}
+            :component wallet.collectibles/nft-details-modal}
 
            ;My Status
            {:name      :my-status
